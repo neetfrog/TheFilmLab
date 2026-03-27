@@ -377,8 +377,6 @@ export default function App() {
                   key={preset.id}
                   onClick={() => {
                     setSelectedPreset(preset);
-                    // Close sidebar on mobile after selection
-                    if (window.innerWidth < 768) setSidebarOpen(false);
                   }}
                   className={`w-full text-left px-3 py-2 rounded-lg transition-all group relative ${
                     isSelected
