@@ -623,7 +623,7 @@ export default function App() {
           ) : (
             /* Normal View */
             <div
-              className="relative flex items-center justify-center w-full h-full p-4"
+              className="relative flex items-center justify-center w-full h-full"
               onMouseDown={() => setShowOriginal(true)}
               onMouseUp={() => setShowOriginal(false)}
               onMouseLeave={() => setShowOriginal(false)}
@@ -765,7 +765,7 @@ function OriginalOverlay({ imageData }: { imageData: ImageData }) {
   return (
     <canvas
       ref={ref}
-      className="absolute max-w-full max-h-[calc(100vh-52px)] object-contain shadow-2xl"
+      className="absolute inset-0 m-auto max-w-full max-h-[calc(100vh-52px)] object-contain shadow-2xl"
     />
   );
 }
