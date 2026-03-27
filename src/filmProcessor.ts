@@ -95,11 +95,14 @@ function buildContrastLUT(contrast: number, toe: number, shoulder: number, faded
         x = mid + curved * (1 - mid);
       }
 
-      // Additional S-curve
+      // Additional S-curve (power-based, endpoint-preserving: 0→0, 0.5→0.5, 1→1)
       if (contrast > 0) {
-        const c = contrast * 2;
-        x = ((Math.atan((x - 0.5) * c * Math.PI) / Math.PI) + 0.5);
-        x = x * (1 + contrast * 0.3) - contrast * 0.15;
+        const ex = 1 + contrast * 2.5;
+        if (x < 0.5) {
+          x = 0.5 * Math.pow(Math.max(0, 2 * x), ex);
+        } else {
+          x = 1 - 0.5 * Math.pow(Math.max(0, 2 * (1 - x)), ex);
+        }
       } else {
         x = 0.5 + (x - 0.5) * (1 + contrast);
       }
