@@ -146,6 +146,24 @@ export default function App() {
     setGrainSeed(Math.floor(Math.random() * 100000));
   }, [selectedPreset.id]);
 
+  // Keep compare and hold-original states in sync
+  useEffect(() => {
+    // Never show original overlay during split view; on exit ensure processed remains visible.
+    if (splitView) {
+      setShowOriginal(false);
+    }
+  }, [splitView]);
+
+  // Ensure processed canvas gets redrawn on exit compare mode.
+  useEffect(() => {
+    if (!splitView && processedImageData && canvasRef.current) {
+      const canvas = canvasRef.current;
+      canvas.width = processedImageData.width;
+      canvas.height = processedImageData.height;
+      canvas.getContext('2d')!.putImageData(processedImageData, 0, 0);
+    }
+  }, [splitView, processedImageData]);
+
   const currentParams: ProcessingParams = useMemo(() => ({
     grainAmountOverride: grainAmount ?? undefined,
     grainSizeOverride: grainSize ?? undefined,
@@ -410,7 +428,10 @@ export default function App() {
           {image && (
             <div className="flex items-center gap-2">
               <button
-                onClick={() => setSplitView(!splitView)}
+                onClick={() => {
+                  setSplitView((prev) => !prev);
+                  setShowOriginal(false);
+                }}
                 className={`px-2.5 py-1.5 rounded-lg text-xs flex items-center gap-1.5 transition-all border flex-shrink-0 ${
                   splitView
                     ? 'bg-amber-500/15 text-amber-400 border-amber-500/25'
