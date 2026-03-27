@@ -121,6 +121,11 @@ export interface ProcessingParams {
   brightnessOverride?: number;
   fadedBlacksOverride?: number;
   exposureCompensation?: number;
+  purpleFringingOverride?: number;
+  lensDistortionOverride?: number;
+  colorShiftXOverride?: number;
+  colorShiftYOverride?: number;
+  whiteBalanceOverride?: number;
 }
 
 export function processImage(
@@ -145,6 +150,11 @@ export function processImage(
   const vignetteAmount = params.vignetteOverride ?? preset.vignette;
   const halationAmount = params.halationOverride ?? preset.halation;
   const exposure = params.exposureCompensation ?? 0;
+  const purpleFringing = params.purpleFringingOverride ?? preset.purpleFringing;
+  const lensDistortion = params.lensDistortionOverride ?? preset.lensDistortion;
+  const colorShiftX = params.colorShiftXOverride ?? preset.colorShiftX;
+  const colorShiftY = params.colorShiftYOverride ?? preset.colorShiftY;
+  const whiteBalance = params.whiteBalanceOverride ?? preset.whiteBalance;
 
   // Build LUTs
   const lutR = buildCurveLUT(preset.curves.r);
@@ -182,17 +192,34 @@ export function processImage(
       b = Math.max(0, Math.min(255, b + brightnessBias));
     }
 
-    // 3. Apply film curves (characteristic curve)
+    // 3. White balance (color temperature adjustment)
+    if (whiteBalance !== 0) {
+      if (whiteBalance > 0) {
+        // Warm (increase red/yellow, decrease blue)
+        const warmAmount = whiteBalance * 0.3;
+        r = Math.min(255, r * (1 + warmAmount));
+        g = Math.min(255, g * (1 + warmAmount * 0.5));
+        b = Math.max(0, b * (1 - warmAmount * 0.8));
+      } else {
+        // Cool (increase blue, decrease red/yellow)
+        const coolAmount = Math.abs(whiteBalance) * 0.3;
+        r = Math.max(0, r * (1 - coolAmount * 0.5));
+        g = Math.max(0, g * (1 - coolAmount * 0.3));
+        b = Math.min(255, b * (1 + coolAmount));
+      }
+    }
+
+    // 4. Apply film curves (characteristic curve)
     r = lutR[Math.round(r)];
     g = lutG[Math.round(g)];
     b = lutB[Math.round(b)];
 
-    // 4. Apply contrast with toe/shoulder
+    // 5. Apply contrast with toe/shoulder
     r = contrastLUT[r];
     g = contrastLUT[g];
     b = contrastLUT[b];
 
-    // 5. Color cast (split toning by luminance)
+    // 6. Color cast (split toning by luminance)
     const lum = r * 0.299 + g * 0.587 + b * 0.114;
     const lumNorm = lum / 255;
 
@@ -233,17 +260,32 @@ export function processImage(
     data[i + 2] = b;
   }
 
-  // 7. Halation (light bleed around bright areas - CineStill signature)
+  // 7. Color shift
+  if (colorShiftX !== 0 || colorShiftY !== 0) {
+    applyColorShift(output, colorShiftX, colorShiftY, width, height);
+  }
+
+  // 8. Lens distortion (barrel/pincushion)
+  if (lensDistortion !== 0) {
+    return applyLensDistortion(output, lensDistortion);
+  }
+
+  // 9. Halation (light bleed around bright areas - CineStill signature)
   if (halationAmount > 0) {
     applyHalation(output, halationAmount, width, height);
   }
 
-  // 8. Vignette - optimized with LUT
+  // 10. Vignette - optimized with LUT
   if (vignetteAmount > 0) {
     applyVignetteLUT(output, vignetteAmount, width, height);
   }
 
-  // 9. Film grain
+  // 11. Purple fringing (chromatic aberration)
+  if (purpleFringing > 0) {
+    applyPurpleFringing(output, purpleFringing, width, height);
+  }
+
+  // 12. Film grain
   if (grainAmount > 0) {
     const isBW = preset.type === 'bw-negative';
     const [grR, grG, grB] = generateGrainChannels(width, height, {
@@ -268,23 +310,23 @@ function applyHalation(imageData: ImageData, amount: number, width: number, heig
   for (let i = 0; i < width * height; i++) {
     const idx = i * 4;
     const lum = (data[idx] * 0.299 + data[idx + 1] * 0.587 + data[idx + 2] * 0.114) / 255;
-    // Only bright areas trigger halation
-    brightMask[i] = Math.max(0, (lum - 0.65) / 0.35);
+    // Lower threshold (0.4 instead of 0.65) and higher sensitivity for more visible halation
+    brightMask[i] = Math.max(0, (lum - 0.4) / 0.6);
   }
 
   // Blur the bright mask (box blur approximation, multiple passes)
-  const radius = Math.ceil(Math.min(width, height) * 0.02 * amount);
+  const radius = Math.ceil(Math.min(width, height) * 0.025 * amount);
   const blurred = boxBlur(brightMask, width, height, radius);
   const blurred2 = boxBlur(blurred, width, height, radius);
 
-  // Apply halation as warm/red glow
-  const strength = amount * 80;
+  // Apply halation as warm/red glow with higher intensity
+  const strength = amount * 120;
   for (let i = 0; i < width * height; i++) {
     const idx = i * 4;
     const h = blurred2[i] * strength;
-    data[idx] = Math.min(255, data[idx] + h * 1.0);       // Red
-    data[idx + 1] = Math.min(255, data[idx + 1] + h * 0.3); // Green (slight)
-    data[idx + 2] = Math.min(255, data[idx + 2] + h * 0.1); // Blue (minimal)
+    data[idx] = Math.min(255, data[idx] + h * 1.2);       // Red
+    data[idx + 1] = Math.min(255, data[idx + 1] + h * 0.4); // Green (slight)
+    data[idx + 2] = Math.min(255, data[idx + 2] + h * 0.15); // Blue (minimal)
   }
 }
 
@@ -342,4 +384,228 @@ function applyVignetteLUT(imageData: ImageData, amount: number, width: number, h
     data[idx + 2] = Math.round(data[idx + 2] * v);
   }
 }
+
+// Purple fringing: simulates chromatic aberration (color separation at edges)
+function applyPurpleFringing(imageData: ImageData, amount: number, width: number, height: number): void {
+  const data = imageData.data;
+  const output = new Uint8ClampedArray(data);
+  const offset = Math.max(1, Math.ceil(amount * 3)); // Shift increases with amount (1-3 pixels)
+
+  // Create separate channels for chromatic shift
+  for (let y = 0; y < height; y++) {
+    for (let x = 0; x < width; x++) {
+      const idx = (y * width + x) * 4;
+
+      // Red channel stays in place
+      // Green channel shifts slightly toward upper-left
+      // Blue channel shifts toward lower-right for purple/magenta fringing effect
+      
+      let gx = x - offset;
+      let gy = y - offset;
+      let bx = x + offset;
+      let by = y + offset;
+
+      // Clamp coordinates
+      gx = Math.max(0, Math.min(width - 1, gx));
+      gy = Math.max(0, Math.min(height - 1, gy));
+      bx = Math.max(0, Math.min(width - 1, bx));
+      by = Math.max(0, Math.min(height - 1, by));
+
+      const rIdx = (y * width + x) * 4;
+      const gIdx = (gy * width + gx) * 4;
+      const bIdx = (by * width + bx) * 4;
+
+      output[rIdx] = data[rIdx];         // R stays
+      output[rIdx + 1] = data[gIdx + 1]; // G shifts
+      output[rIdx + 2] = data[bIdx + 2]; // B shifts
+      output[rIdx + 3] = data[rIdx + 3]; // A stays
+    }
+  }
+
+  // Copy output back to data
+  for (let i = 0; i < data.length; i++) {
+    data[i] = output[i];
+  }
+}
+
+// Lens distortion: barrel (positive) or pincushion (negative) distortion
+// Automatically crops to avoid black edges
+function applyLensDistortion(imageData: ImageData, amount: number): ImageData {
+  const width = imageData.width;
+  const height = imageData.height;
+  const data = imageData.data;
+
+  const cx = width / 2;
+  const cy = height / 2;
+  const maxRadius = Math.sqrt(cx * cx + cy * cy);
+  const distortionStrength = amount * 0.5;
+
+  // First pass: find valid bounds (where we have source data)
+  let minX = width, maxX = 0, minY = height, maxY = 0;
+  let hasValidData = false;
+
+  for (let y = 0; y < height; y++) {
+    for (let x = 0; x < width; x++) {
+      const nx = (x - cx) / maxRadius;
+      const ny = (y - cy) / maxRadius;
+      const radius = Math.sqrt(nx * nx + ny * ny);
+
+      const distortedRadius = radius * (1 + distortionStrength * radius * radius);
+      let srcX: number, srcY: number;
+
+      if (radius > 0) {
+        const scale = distortedRadius / radius;
+        srcX = cx + nx * maxRadius * scale;
+        srcY = cy + ny * maxRadius * scale;
+      } else {
+        srcX = x;
+        srcY = y;
+      }
+
+      // Check if source is within bounds
+      if (srcX >= 0 && srcX < width && srcY >= 0 && srcY < height) {
+        minX = Math.min(minX, x);
+        maxX = Math.max(maxX, x);
+        minY = Math.min(minY, y);
+        maxY = Math.max(maxY, y);
+        hasValidData = true;
+      }
+    }
+  }
+
+  // If no valid data, return original
+  if (!hasValidData) return imageData;
+
+  const cropWidth = maxX - minX + 1;
+  const cropHeight = maxY - minY + 1;
+
+  // Create cropped+scaled output
+  const scaleX = width / cropWidth;
+  const scaleY = height / cropHeight;
+  const scale = Math.min(scaleX, scaleY); // Maintain aspect ratio
+
+  const newWidth = Math.round(cropWidth * scale);
+  const newHeight = Math.round(cropHeight * scale);
+  const output = new ImageData(new Uint8ClampedArray(newWidth * newHeight * 4), newWidth, newHeight);
+  const outData = output.data;
+
+  // Second pass: sample with crop and scale
+  for (let outY = 0; outY < newHeight; outY++) {
+    for (let outX = 0; outX < newWidth; outX++) {
+      // Map output to cropped region
+      const srcCropX = outX / scale + minX;
+      const srcCropY = outY / scale + minY;
+
+      // Get source coordinates after distortion
+      const nx = (srcCropX - cx) / maxRadius;
+      const ny = (srcCropY - cy) / maxRadius;
+      const radius = Math.sqrt(nx * nx + ny * ny);
+
+      const distortedRadius = radius * (1 + distortionStrength * radius * radius);
+      let sampleX: number, sampleY: number;
+
+      if (radius > 0) {
+        const sampleScale = distortedRadius / radius;
+        sampleX = cx + nx * maxRadius * sampleScale;
+        sampleY = cy + ny * maxRadius * sampleScale;
+      } else {
+        sampleX = srcCropX;
+        sampleY = srcCropY;
+      }
+
+      // Bilinear interpolation
+      const x0 = Math.floor(sampleX);
+      const y0 = Math.floor(sampleY);
+      const x1 = Math.min(x0 + 1, width - 1);
+      const y1 = Math.min(y0 + 1, height - 1);
+
+      if (sampleX >= 0 && sampleX < width && sampleY >= 0 && sampleY < height) {
+        const fx = sampleX - x0;
+        const fy = sampleY - y0;
+
+        const outIdx = (outY * newWidth + outX) * 4;
+
+        for (let c = 0; c < 4; c++) {
+          const idx00 = (y0 * width + x0) * 4 + c;
+          const idx10 = (y0 * width + x1) * 4 + c;
+          const idx01 = (y1 * width + x0) * 4 + c;
+          const idx11 = (y1 * width + x1) * 4 + c;
+
+          const v00 = data[idx00];
+          const v10 = data[idx10];
+          const v01 = data[idx01];
+          const v11 = data[idx11];
+
+          const v0 = v00 * (1 - fx) + v10 * fx;
+          const v1 = v01 * (1 - fx) + v11 * fx;
+          const v = v0 * (1 - fy) + v1 * fy;
+
+          outData[outIdx + c] = Math.round(v);
+        }
+      } else {
+        // Out of bounds - transparent
+        const outIdx = (outY * newWidth + outX) * 4;
+        outData[outIdx] = 0;
+        outData[outIdx + 1] = 0;
+        outData[outIdx + 2] = 0;
+        outData[outIdx + 3] = 255;
+      }
+    }
+  }
+
+  return output;
+}
+
+// Color shift: adds color tint based on position in image
+function applyColorShift(imageData: ImageData, shiftX: number, shiftY: number, width: number, height: number): void {
+  const data = imageData.data;
+  
+  // Normalize shift to 0-1 range for color intensity
+  const intensityX = Math.abs(shiftX) * 0.2; // Scale for reasonable effect
+  const intensityY = Math.abs(shiftY) * 0.2;
+
+  for (let y = 0; y < height; y++) {
+    for (let x = 0; x < width; x++) {
+      const idx = (y * width + x) * 4;
+
+      // Calculate position-based shift (0 = none, 1 = max shift)
+      const posX = x / width;
+      const posY = y / height;
+
+      // Apply color shifts based on position
+      let rShift = 0;
+      let gShift = 0;
+      let bShift = 0;
+
+      // Horizontal shift (cyan to red)
+      if (shiftX > 0) {
+        // Red shift (toward red)
+        rShift = posX * intensityX * 30;
+        bShift -= posX * intensityX * 15; // Reduce blue for cyan
+      } else if (shiftX < 0) {
+        // Cyan shift (toward cyan)
+        bShift = (1 - posX) * intensityX * 30;
+        rShift -= (1 - posX) * intensityX * 15; // Reduce red
+      }
+
+      // Vertical shift (blue to yellow)
+      if (shiftY > 0) {
+        // Yellow shift (red + green)
+        rShift += posY * intensityY * 25;
+        gShift += posY * intensityY * 25;
+        bShift -= posY * intensityY * 20; // Reduce blue
+      } else if (shiftY < 0) {
+        // Blue shift
+        bShift += (1 - posY) * intensityY * 30;
+        rShift -= (1 - posY) * intensityY * 15;
+        gShift -= (1 - posY) * intensityY * 15;
+      }
+
+      data[idx] = Math.max(0, Math.min(255, data[idx] + rShift));
+      data[idx + 1] = Math.max(0, Math.min(255, data[idx + 1] + gShift));
+      data[idx + 2] = Math.max(0, Math.min(255, data[idx + 2] + bShift));
+    }
+  }
+}
+
 

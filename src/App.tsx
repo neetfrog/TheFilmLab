@@ -112,6 +112,11 @@ export default function App() {
   const [brightnessAmount, setBrightnessAmount] = useState<number | null>(null);
   const [fadedBlacks, setFadedBlacks] = useState<number | null>(null);
   const [exposure, setExposure] = useState(0);
+  const [purpleFringing, setPurpleFringing] = useState<number | null>(null);
+  const [lensDistortion, setLensDistortion] = useState<number | null>(null);
+  const [colorShiftX, setColorShiftX] = useState<number | null>(null);
+  const [colorShiftY, setColorShiftY] = useState<number | null>(null);
+  const [whiteBalance, setWhiteBalance] = useState<number | null>(null);
   const [processedImageData, setProcessedImageData] = useState<ImageData | null>(null);
 
   const canvasRef = useRef<HTMLCanvasElement>(null);
@@ -133,6 +138,11 @@ export default function App() {
     setBrightnessAmount(null);
     setFadedBlacks(null);
     setExposure(0);
+    setPurpleFringing(null);
+    setLensDistortion(null);
+    setColorShiftX(null);
+    setColorShiftY(null);
+    setWhiteBalance(null);
     setGrainSeed(Math.floor(Math.random() * 100000));
   }, [selectedPreset.id]);
 
@@ -147,7 +157,12 @@ export default function App() {
     brightnessOverride: brightnessAmount ?? undefined,
     fadedBlacksOverride: fadedBlacks ?? undefined,
     exposureCompensation: exposure,
-  }), [grainAmount, grainSize, grainRoughness, vignetteAmount, halationAmount, contrastAmount, saturationAmount, brightnessAmount, fadedBlacks, exposure]);
+    purpleFringingOverride: purpleFringing ?? undefined,
+    lensDistortionOverride: lensDistortion ?? undefined,
+    colorShiftXOverride: colorShiftX ?? undefined,
+    colorShiftYOverride: colorShiftY ?? undefined,
+    whiteBalanceOverride: whiteBalance ?? undefined,
+  }), [grainAmount, grainSize, grainRoughness, vignetteAmount, halationAmount, contrastAmount, saturationAmount, brightnessAmount, fadedBlacks, exposure, purpleFringing, lensDistortion, colorShiftX, colorShiftY, whiteBalance]);
 
   const frameBackground = frameColor === 'white' ? '#ffffff' : frameColor === 'black' ? '#000000' : 'transparent';
   const framePadding = frameColor !== 'none' ? `${frameThickness}%` : '0';
@@ -190,23 +205,43 @@ export default function App() {
     };
   }, [imageData, selectedPreset, currentParams, grainSeed]);
 
-  // Repaint original canvas when data or split mode changes.
+  // Repaint original canvas when data changes (not on splitView toggle)
   useEffect(() => {
     if (!imageData || !originalCanvasRef.current) return;
     const canvas = originalCanvasRef.current;
     canvas.width = imageData.width;
     canvas.height = imageData.height;
     canvas.getContext('2d')!.putImageData(imageData, 0, 0);
-  }, [imageData, splitView]);
+  }, [imageData]);
 
-  // Repaint processed canvas when split mode changes and we have cached output.
+  // Repaint processed canvas when data changes (not on splitView toggle)
   useEffect(() => {
     if (!processedImageData || !canvasRef.current) return;
     const canvas = canvasRef.current;
     canvas.width = processedImageData.width;
     canvas.height = processedImageData.height;
     canvas.getContext('2d')!.putImageData(processedImageData, 0, 0);
-  }, [processedImageData, splitView]);
+  }, [processedImageData]);
+
+  // In split view, ensure canvases are properly aligned and sized
+  useEffect(() => {
+    if (!splitView || !imageData) return;
+    
+    // Make sure original canvas is always original image
+    if (originalCanvasRef.current) {
+      originalCanvasRef.current.width = imageData.width;
+      originalCanvasRef.current.height = imageData.height;
+      originalCanvasRef.current.getContext('2d')!.putImageData(imageData, 0, 0);
+    }
+    
+    // For processed canvas in split view, match original dimensions if possible
+    if (canvasRef.current && processedImageData) {
+      // If sizes match, use as-is; if not, we'll center it
+      canvasRef.current.width = processedImageData.width;
+      canvasRef.current.height = processedImageData.height;
+      canvasRef.current.getContext('2d')!.putImageData(processedImageData, 0, 0);
+    }
+  }, [splitView, imageData, processedImageData]);
 
   const loadImage = useCallback((img: HTMLImageElement) => {
     // Limit size for performance
@@ -307,6 +342,11 @@ export default function App() {
     setBrightnessAmount(null);
     setFadedBlacks(null);
     setExposure(0);
+    setPurpleFringing(null);
+    setLensDistortion(null);
+    setColorShiftX(null);
+    setColorShiftY(null);
+    setWhiteBalance(null);
   }, []);
 
   const filteredPresets = filterType === 'all'
@@ -324,12 +364,18 @@ export default function App() {
     saturation: saturationAmount ?? selectedPreset.saturation,
     brightness: brightnessAmount ?? selectedPreset.brightness,
     fadedBlacks: fadedBlacks ?? selectedPreset.fadedBlacks,
+    purpleFringing: purpleFringing ?? selectedPreset.purpleFringing,
+    lensDistortion: lensDistortion ?? selectedPreset.lensDistortion,
+    colorShiftX: colorShiftX ?? selectedPreset.colorShiftX,
+    colorShiftY: colorShiftY ?? selectedPreset.colorShiftY,
+    whiteBalance: whiteBalance ?? selectedPreset.whiteBalance,
   };
 
   // Check if any overrides are active
   const hasOverrides = grainAmount !== null || grainSize !== null || grainRoughness !== null ||
     vignetteAmount !== null || halationAmount !== null || contrastAmount !== null ||
-    saturationAmount !== null || brightnessAmount !== null || fadedBlacks !== null || exposure !== 0;
+    saturationAmount !== null || brightnessAmount !== null || fadedBlacks !== null || exposure !== 0 ||
+    purpleFringing !== null || lensDistortion !== null || colorShiftX !== null || colorShiftY !== null || whiteBalance !== null;
 
   // Split view mouse handling
   const handleSplitMove = useCallback((clientX: number) => {
@@ -483,6 +529,8 @@ export default function App() {
               <SectionHeader title="Tone" />
             </div>
             <div className="px-3 pb-2 space-y-1.5">
+              <SliderControl label="White Balance" value={eff.whiteBalance} min={-1} max={1} step={0.05}
+                defaultValue={selectedPreset.whiteBalance} onChange={setWhiteBalance} format={v => v > 0 ? `+${(v * 100).toFixed(0)}% Warm` : v < 0 ? `${(v * 100).toFixed(0)}% Cool` : 'Neutral'} />
               <SliderControl label="Exposure" value={exposure} min={-2} max={2} step={0.05}
                 defaultValue={0} onChange={(v) => setExposure(v ?? 0)} format={v => `${v > 0 ? '+' : ''}${v.toFixed(1)} EV`} />
               <SliderControl label="Contrast" value={eff.contrast} min={-0.5} max={0.5} step={0.01}
@@ -519,11 +567,26 @@ export default function App() {
             <div className="px-3 pt-1 pb-1">
               <SectionHeader title="Effects" />
             </div>
-            <div className="px-3 pb-3 space-y-1.5">
+            <div className="px-3 pb-2 space-y-1.5">
               <SliderControl label="Vignette" value={eff.vignette} min={0} max={0.6} step={0.01}
                 defaultValue={selectedPreset.vignette} onChange={setVignetteAmount} format={v => `${(v * 100).toFixed(0)}%`} />
               <SliderControl label="Halation" value={eff.halation} min={0} max={0.8} step={0.01}
                 defaultValue={selectedPreset.halation} onChange={setHalationAmount} format={v => `${(v * 100).toFixed(0)}%`} />
+            </div>
+
+            {/* Optical Effects Section */}
+            <div className="px-3 pt-1 pb-1">
+              <SectionHeader title="Optical Effects" />
+            </div>
+            <div className="px-3 pb-3 space-y-1.5">
+              <SliderControl label="Purple Fringing" value={eff.purpleFringing} min={0} max={1} step={0.01}
+                defaultValue={selectedPreset.purpleFringing} onChange={setPurpleFringing} format={v => `${(v * 100).toFixed(0)}%`} />
+              <SliderControl label="Lens Distortion" value={eff.lensDistortion} min={-0.5} max={0.5} step={0.01}
+                defaultValue={selectedPreset.lensDistortion} onChange={setLensDistortion} format={v => `${v > 0 ? '+' : ''}${(v * 100).toFixed(0)}%`} />
+              <SliderControl label="Color Shift X" value={eff.colorShiftX} min={-1} max={1} step={0.05}
+                defaultValue={selectedPreset.colorShiftX} onChange={setColorShiftX} format={v => `${v > 0 ? '+' : ''}${(v * 100).toFixed(0)}%`} />
+              <SliderControl label="Color Shift Y" value={eff.colorShiftY} min={-1} max={1} step={0.05}
+                defaultValue={selectedPreset.colorShiftY} onChange={setColorShiftY} format={v => `${v > 0 ? '+' : ''}${(v * 100).toFixed(0)}%`} />
             </div>
 
             {/* Frame Section */}
@@ -663,7 +726,7 @@ export default function App() {
                 />
                 <div
                   className="absolute inset-0 overflow-hidden pointer-events-none"
-                  style={{ clipPath: `inset(0 ${100 - splitPos}% 0 0)` }}
+                  style={{ clipPath: `inset(0 0 0 ${splitPos}%)` }}
                 >
                   <canvas
                     ref={canvasRef}
@@ -684,10 +747,10 @@ export default function App() {
                 </div>
                 {/* Labels */}
                 <div className="absolute top-2 left-2 bg-black/60 text-white/80 text-[10px] font-medium px-2 py-0.5 rounded-md backdrop-blur-sm">
-                  {selectedPreset.name}
+                  Original
                 </div>
                 <div className="absolute top-2 right-2 bg-black/60 text-white/80 text-[10px] font-medium px-2 py-0.5 rounded-md backdrop-blur-sm">
-                  Original
+                  {selectedPreset.name}
                 </div>
               </div>
             </div>
@@ -708,8 +771,8 @@ export default function App() {
               >
                 <canvas
                   ref={canvasRef}
-                  className={`max-w-full max-h-[calc(100vh-52px)] object-contain shadow-2xl transition-opacity duration-150 ${
-                    showOriginal ? 'opacity-0' : 'opacity-100'
+                  className={`max-w-full max-h-[calc(100vh-52px)] object-contain shadow-2xl ${
+                    showOriginal ? 'opacity-0 pointer-events-none' : 'opacity-100'
                   }`}
                   style={{ imageRendering: 'auto' }}
                 />
