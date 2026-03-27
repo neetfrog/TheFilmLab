@@ -265,11 +265,31 @@ export default function App() {
 
   const handleDownload = useCallback(() => {
     if (!canvasRef.current) return;
+
+    const sourceCanvas = canvasRef.current;
+    const dstCanvas = document.createElement('canvas');
+
+    if (frameColor === 'none') {
+      dstCanvas.width = sourceCanvas.width;
+      dstCanvas.height = sourceCanvas.height;
+      dstCanvas.getContext('2d')?.drawImage(sourceCanvas, 0, 0);
+    } else {
+      const frameBg = frameColor === 'white' ? '#ffffff' : '#000000';
+      const thicknessPx = Math.round((frameThickness / 100) * Math.max(sourceCanvas.width, sourceCanvas.height));
+      dstCanvas.width = sourceCanvas.width + thicknessPx * 2;
+      dstCanvas.height = sourceCanvas.height + thicknessPx * 2;
+      const ctx = dstCanvas.getContext('2d');
+      if (!ctx) return;
+      ctx.fillStyle = frameBg;
+      ctx.fillRect(0, 0, dstCanvas.width, dstCanvas.height);
+      ctx.drawImage(sourceCanvas, thicknessPx, thicknessPx, sourceCanvas.width, sourceCanvas.height);
+    }
+
     const link = document.createElement('a');
     link.download = `${selectedPreset.brand}-${selectedPreset.name.replace(/\s+/g, '-')}.jpg`;
-    link.href = canvasRef.current.toDataURL('image/jpeg', 0.95);
+    link.href = dstCanvas.toDataURL('image/jpeg', 0.95);
     link.click();
-  }, [selectedPreset]);
+  }, [selectedPreset, frameColor, frameThickness]);
 
   const handleRerollGrain = useCallback(() => {
     setGrainSeed(Math.floor(Math.random() * 100000));
@@ -618,6 +638,7 @@ export default function App() {
             <div
               ref={splitContainerRef}
               className="relative w-full h-full flex items-center justify-center select-none"
+              style={{ backgroundColor: frameBackground, padding: framePadding }}
               onMouseMove={(e) => handleSplitMove(e.clientX)}
               onMouseUp={() => setDraggingSplit(false)}
               onMouseLeave={() => setDraggingSplit(false)}
@@ -626,7 +647,6 @@ export default function App() {
             >
               <div
                 className="relative inline-block max-w-full max-h-full"
-                style={{ backgroundColor: frameBackground, padding: framePadding }}
               >
                 <canvas
                   ref={originalCanvasRef}
