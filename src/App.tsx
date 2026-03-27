@@ -1,6 +1,7 @@
 import { useState, useRef, useCallback, useEffect, useMemo } from 'react';
 import { filmPresets, FilmPreset } from './filmPresets';
 import { processImage, ProcessingParams } from './filmProcessor';
+import logo from './favicon/logo.png';
 
 // ─── Icons ───────────────────────────────────────────────
 const UploadIcon = () => (
@@ -592,9 +593,7 @@ export default function App() {
             >
               {sidebarOpen ? <ChevronLeftIcon /> : <MenuIcon />}
             </button>
-            <div className="w-8 h-8 rounded-lg bg-gradient-to-br from-amber-400 via-orange-500 to-red-600 flex items-center justify-center text-sm font-black text-white shadow-lg shadow-amber-500/20">
-              F
-            </div>
+            <img src={logo} alt="FilmLab logo" className="hidden md:block w-8 h-8 rounded-none object-contain" />
             <div>
               <h1 className="hidden md:block text-base font-bold tracking-tight leading-tight">FilmLab</h1>
               <p className="hidden md:block text-[9px] text-zinc-600 tracking-[0.2em] uppercase leading-tight">Analog Film Emulator</p>
@@ -672,6 +671,17 @@ export default function App() {
         } md:w-[310px] md:min-w-[310px] border-r border-zinc-800/50 bg-zinc-900/40 flex flex-col overflow-hidden transition-all duration-200 ${
           sidebarOpen ? 'md:relative fixed md:static top-16 left-0 right-auto bottom-0 z-40' : ''
         }`}>
+          {/* Mobile logo (sidebar) */}
+          <div className="md:hidden px-3 pt-3 pb-2 border-b border-zinc-800/40 bg-zinc-900/40 backdrop-blur-sm">
+            <div className="flex items-center gap-2">
+              <img src={logo} alt="FilmLab logo" className="w-8 h-8 object-contain" />
+              <div>
+                <h1 className="text-sm font-bold tracking-tight leading-tight">FilmLab</h1>
+                <p className="text-[9px] text-zinc-500 tracking-[0.2em] uppercase leading-tight">Analog Film Emulator</p>
+              </div>
+            </div>
+          </div>
+
           {/* Type Filter */}
           <div className="sticky top-0 z-10 px-3 pt-3 pb-2 border-b border-zinc-800/40 bg-zinc-900/40 backdrop-blur-sm">
             <div className="flex items-center gap-1">
@@ -723,7 +733,6 @@ export default function App() {
                       </h3>
                     </div>
                     <div className="flex items-center gap-1.5 shrink-0">
-                      <span className="text-[9px] text-zinc-700 font-mono tabular-nums">{preset.iso}</span>
                       <span className={`text-[9px] px-1.5 py-0.5 rounded border font-medium ${typeColors[preset.type]}`}>
                         {typeBadge[preset.type]}
                       </span>
@@ -1182,27 +1191,14 @@ export default function App() {
 
           {/* Bottom info bar */}
           {image && !splitView && (
-            <div className="absolute bottom-3 left-1/2 -translate-x-1/2 flex items-center gap-2.5 bg-zinc-900/70 backdrop-blur-xl border border-zinc-800/50 rounded-xl px-3 py-1.5 text-[11px]">
+            <div className="absolute bottom-3 left-1/2 -translate-x-1/2 flex items-center gap-2.5 bg-zinc-900/70 backdrop-blur-xl border border-zinc-800/50 rounded-xl px-3 py-1.5 text-[11px] whitespace-nowrap">
               <span className={`px-1.5 py-0.5 rounded border font-medium text-[9px] ${typeColors[selectedPreset.type]}`}>
                 {typeBadge[selectedPreset.type]}
               </span>
-              <span className="font-semibold text-zinc-200">{selectedPreset.brand} {selectedPreset.name}</span>
+              <span className="font-semibold text-zinc-200 truncate">{selectedPreset.brand} {selectedPreset.name}</span>
+
               <span className="text-zinc-700">|</span>
-              <span className="text-zinc-600 font-mono tabular-nums">ISO {selectedPreset.iso}</span>
-              {imageData && (
-                <>
-                  <span className="text-zinc-700">|</span>
-                  <span className="text-zinc-600 font-mono tabular-nums">{imageData.width}×{imageData.height}</span>
-                </>
-              )}
-              {processTime > 0 && (
-                <>
-                  <span className="text-zinc-700">|</span>
-                  <span className="text-zinc-700 font-mono tabular-nums">{processTime}ms</span>
-                </>
-              )}
-              <span className="text-zinc-700">|</span>
-              <span className="text-zinc-600">Zoom {Math.round(zoom * 100)}%</span>
+              <span className="text-zinc-600">{Math.round(zoom * 100)}%</span>
               <span className="text-zinc-700">|</span>
               <button
                 onClick={() => fileInputRef.current?.click()}
