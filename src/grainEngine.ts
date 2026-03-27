@@ -1,22 +1,22 @@
-// Realistic film grain engine using multiple noise octaves
+// Realistic film grain engine - Optimized
 // Generates organic-looking grain that responds to image luminance
 
-// Simple hash-based pseudo-random for deterministic grain
+// Fast PRNG hash (XORSHIFT-based)
 function hash(x: number, y: number, seed: number): number {
   let h = (x * 374761393 + y * 668265263 + seed * 1274126177) | 0;
-  h = ((h ^ (h >> 13)) * 1103515245) | 0;
-  h = (h ^ (h >> 16)) | 0;
-  return (h & 0x7fffffff) / 0x7fffffff;
+  h = (h >>> 13) ^ h;
+  h = (h * 1103515245) | 0;
+  return (((h >>> 16) ^ h) & 0x7fffffff) / 0x7fffffff;
 }
 
-// Smooth noise interpolation
+// Perlin-style smooth noise
 function smoothNoise(x: number, y: number, seed: number): number {
   const ix = Math.floor(x);
   const iy = Math.floor(y);
   const fx = x - ix;
   const fy = y - iy;
 
-  // Smoothstep interpolation
+  // Smoothstep fade curve (3t² - 2t³)
   const sx = fx * fx * (3 - 2 * fx);
   const sy = fy * fy * (3 - 2 * fy);
 
@@ -31,7 +31,7 @@ function smoothNoise(x: number, y: number, seed: number): number {
   return nx0 + sy * (nx1 - nx0);
 }
 
-// Multi-octave fractal noise for organic grain
+// Multi-octave fractal noise (improved roughness response)
 function fractalNoise(x: number, y: number, octaves: number, roughness: number, seed: number): number {
   let value = 0;
   let amplitude = 1;
@@ -70,20 +70,24 @@ export function generateGrainTexture(
   const scale = Math.max(0.3, size);
   const octaves = roughness > 0.5 ? 4 : roughness > 0.25 ? 3 : 2;
   const invScale = 1 / scale;
+  const roughnessAdjusted = 0.4 + roughness * 0.4;
+  const fineAmount = 0.4 - roughness * 0.2;
+  const grainScaled = amount * 2;
 
   for (let y = 0; y < height; y++) {
     for (let x = 0; x < width; x++) {
+      const idx = y * width + x;
       // Base grain from fractal noise
       const nx = x * invScale;
       const ny = y * invScale;
-      let grain = fractalNoise(nx, ny, octaves, 0.4 + roughness * 0.4, seed);
+      let grain = fractalNoise(nx, ny, octaves, roughnessAdjusted, seed);
 
       // Add fine detail layer
       const fineGrain = hash(x, y, seed + 500);
-      grain = grain * (0.6 + roughness * 0.4) + fineGrain * (0.4 - roughness * 0.2);
+      grain = grain * (0.6 + roughness * 0.4) + fineGrain * fineAmount;
 
       // Center around 0 and scale by amount
-      texture[y * width + x] = (grain - 0.5) * 2 * amount;
+      texture[idx] = (grain - 0.5) * grainScaled;
     }
   }
 
@@ -101,6 +105,7 @@ export function applyGrain(
 ): void {
   const data = imageData.data;
   const len = imageData.width * imageData.height;
+  const strengthScaled = strength * 255;
 
   for (let i = 0; i < len; i++) {
     const idx = i * 4;
@@ -112,11 +117,11 @@ export function applyGrain(
     const lum = (r * 0.299 + g * 0.587 + b * 0.114) / 255;
 
     // Film grain is most visible in midtones, less in deep shadows and highlights
-    // This mimics the density response of silver halide crystals
+    // This mimics the density response of silver halide crystals: sin(lum * π) * 0.7 + 0.3
     const grainResponse = Math.sin(lum * Math.PI) * 0.7 + 0.3;
-    const s = strength * grainResponse * 255;
+    const s = strengthScaled * grainResponse;
 
-    data[idx]     = Math.max(0, Math.min(255, r + grainR[i] * s));
+    data[idx] = Math.max(0, Math.min(255, r + grainR[i] * s));
     data[idx + 1] = Math.max(0, Math.min(255, g + grainG[i] * s));
     data[idx + 2] = Math.max(0, Math.min(255, b + grainB[i] * s));
   }

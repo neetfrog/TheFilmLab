@@ -1,44 +1,45 @@
-// Core film processing engine
+// Core film processing engine - Optimized
 // Applies color grading, curves, tone mapping, halation, and vignette
 
 import { FilmPreset } from './filmPresets';
 import { generateGrainChannels, applyGrain } from './grainEngine';
 
-// Attempt cubic spline, fall back to piecewise linear for curve interpolation
+// Fast cubic interpolation for curve points
 function interpolateCurve(points: [number, number][], x: number): number {
   if (x <= points[0][0]) return points[0][1];
   if (x >= points[points.length - 1][0]) return points[points.length - 1][1];
 
-  // Find segment
-  let i = 0;
-  while (i < points.length - 1 && points[i + 1][0] < x) i++;
+  // Binary search for segment
+  let left = 0, right = points.length - 1;
+  while (left < right - 1) {
+    const mid = (left + right) >>> 1;
+    if (points[mid][0] < x) left = mid;
+    else right = mid;
+  }
+  const i = left;
 
   const [x0, y0] = points[i];
   const [x1, y1] = points[i + 1];
-  const t = (x - x0) / (x1 - x0);
+  const dx = x1 - x0;
+  const t = (x - x0) / dx;
 
-  // Hermite interpolation for smooth curves
+  // Catmull-Rom tangent calculation
+  const m0 = i > 0
+    ? 0.5 * ((y1 - y0) / dx + (y0 - points[i - 1][1]) / (x0 - points[i - 1][0]))
+    : (y1 - y0) / dx;
+  const m1 = i < points.length - 2
+    ? 0.5 * ((points[i + 2][1] - y1) / (points[i + 2][0] - x1) + (y1 - y0) / dx)
+    : (y1 - y0) / dx;
+
+  // Hermite basis
   const t2 = t * t;
   const t3 = t2 * t;
-
-  // Calculate tangents
-  const m0 = i > 0
-    ? 0.5 * ((y1 - y0) / (x1 - x0) + (y0 - points[i - 1][1]) / (x0 - points[i - 1][0]))
-    : (y1 - y0) / (x1 - x0);
-  const m1 = i < points.length - 2
-    ? 0.5 * ((points[i + 2][1] - y1) / (points[i + 2][0] - x1) + (y1 - y0) / (x1 - x0))
-    : (y1 - y0) / (x1 - x0);
-
-  // Scale tangents
-  const sm0 = m0 * (x1 - x0);
-  const sm1 = m1 * (x1 - x0);
-
   const h00 = 2 * t3 - 3 * t2 + 1;
   const h10 = t3 - 2 * t2 + t;
   const h01 = -2 * t3 + 3 * t2;
   const h11 = t3 - t2;
 
-  return Math.max(0, Math.min(1, h00 * y0 + h10 * sm0 + h01 * y1 + h11 * sm1));
+  return Math.max(0, Math.min(1, h00 * y0 + h10 * m0 * dx + h01 * y1 + h11 * m1 * dx));
 }
 
 // Build lookup tables for fast curve application
@@ -47,6 +48,28 @@ function buildCurveLUT(points: [number, number][]): Uint8Array {
   for (let i = 0; i < 256; i++) {
     lut[i] = Math.round(interpolateCurve(points, i / 255) * 255);
   }
+  return lut;
+}
+
+// Pre-compute vignette LUT for faster application
+function buildVignetteLUT(width: number, height: number, amount: number): Uint8Array {
+  const lut = new Uint8Array(width * height);
+  const cx = width / 2;
+  const cy = height / 2;
+  const maxDist = Math.sqrt(cx * cx + cy * cy);
+  const a = amount * 1.5;
+  
+  for (let y = 0; y < height; y++) {
+    const dy = y - cy;
+    const dy2 = dy * dy;
+    for (let x = 0; x < width; x++) {
+      const dx = x - cx;
+      const dist = Math.sqrt(dx * dx + dy2) / maxDist;
+      const vignette = Math.max(0, 1 - a * dist * dist);
+      lut[y * width + x] = Math.round(vignette * 255);
+    }
+  }
+  
   return lut;
 }
 
@@ -131,9 +154,16 @@ export function processImage(
 
   // Exposure multiplier
   const exposureMult = Math.pow(2, exposure);
+  const brightnessBias = brightness * 40;
+  const satInv = saturation !== 1.0;
 
-  // Process pixels
-  for (let i = 0; i < data.length; i += 4) {
+  // Process pixels with optimized loop
+  const pixelCount = data.length;
+  const shadowsTint = preset.shadows;
+  const midtonesTint = preset.midtones;
+  const highlightsTint = preset.highlights;
+
+  for (let i = 0; i < pixelCount; i += 4) {
     let r = data[i];
     let g = data[i + 1];
     let b = data[i + 2];
@@ -145,12 +175,11 @@ export function processImage(
       b = Math.min(255, b * exposureMult);
     }
 
-    // 2. Brightness
-    if (brightness !== 0) {
-      const bAdj = brightness * 40;
-      r = Math.max(0, Math.min(255, r + bAdj));
-      g = Math.max(0, Math.min(255, g + bAdj));
-      b = Math.max(0, Math.min(255, b + bAdj));
+    // 2. Brightness (fast path when zero)
+    if (brightnessBias !== 0) {
+      r = Math.max(0, Math.min(255, r + brightnessBias));
+      g = Math.max(0, Math.min(255, g + brightnessBias));
+      b = Math.max(0, Math.min(255, b + brightnessBias));
     }
 
     // 3. Apply film curves (characteristic curve)
@@ -167,35 +196,36 @@ export function processImage(
     const lum = r * 0.299 + g * 0.587 + b * 0.114;
     const lumNorm = lum / 255;
 
-    // Shadow tint (applied more in dark areas)
+    // Shadow, midtone, highlight weights
     const shadowWeight = Math.max(0, 1 - lumNorm * 2.5);
-    // Midtone tint
     const midWeight = Math.sin(lumNorm * Math.PI);
-    // Highlight tint (applied more in bright areas)
     const highWeight = Math.max(0, lumNorm * 2 - 1);
 
     r = Math.max(0, Math.min(255,
-      r + preset.shadows[0] * shadowWeight +
-      preset.midtones[0] * midWeight +
-      preset.highlights[0] * highWeight
+      r + shadowsTint[0] * shadowWeight +
+      midtonesTint[0] * midWeight +
+      highlightsTint[0] * highWeight
     ));
     g = Math.max(0, Math.min(255,
-      g + preset.shadows[1] * shadowWeight +
-      preset.midtones[1] * midWeight +
-      preset.highlights[1] * highWeight
+      g + shadowsTint[1] * shadowWeight +
+      midtonesTint[1] * midWeight +
+      highlightsTint[1] * highWeight
     ));
     b = Math.max(0, Math.min(255,
-      b + preset.shadows[2] * shadowWeight +
-      preset.midtones[2] * midWeight +
-      preset.highlights[2] * highWeight
+      b + shadowsTint[2] * shadowWeight +
+      midtonesTint[2] * midWeight +
+      highlightsTint[2] * highWeight
     ));
 
-    // 6. Saturation adjustment
-    if (saturation !== 1.0) {
+    // 6. Saturation adjustment (only if needed)
+    if (satInv) {
       const gray = r * 0.299 + g * 0.587 + b * 0.114;
-      r = Math.max(0, Math.min(255, gray + (r - gray) * saturation));
-      g = Math.max(0, Math.min(255, gray + (g - gray) * saturation));
-      b = Math.max(0, Math.min(255, gray + (b - gray) * saturation));
+      const diff_r = r - gray;
+      const diff_g = g - gray;
+      const diff_b = b - gray;
+      r = Math.max(0, Math.min(255, gray + diff_r * saturation));
+      g = Math.max(0, Math.min(255, gray + diff_g * saturation));
+      b = Math.max(0, Math.min(255, gray + diff_b * saturation));
     }
 
     data[i] = r;
@@ -208,9 +238,9 @@ export function processImage(
     applyHalation(output, halationAmount, width, height);
   }
 
-  // 8. Vignette
+  // 8. Vignette - optimized with LUT
   if (vignetteAmount > 0) {
-    applyVignette(output, vignetteAmount, width, height);
+    applyVignetteLUT(output, vignetteAmount, width, height);
   }
 
   // 9. Film grain
@@ -221,7 +251,7 @@ export function processImage(
       size: grainSize,
       roughness: grainRoughness,
       seed: grainSeed ?? Math.floor(Math.random() * 100000),
-      monochrome: isBW ? true : undefined, // B&W film has monochrome grain, color has slight chromatic grain
+      monochrome: isBW ? true : undefined,
     });
     applyGrain(output, grR, grG, grB, 1.0);
   }
@@ -300,26 +330,16 @@ function boxBlur(input: Float32Array, width: number, height: number, radius: num
   return output;
 }
 
-function applyVignette(imageData: ImageData, amount: number, width: number, height: number): void {
+function applyVignetteLUT(imageData: ImageData, amount: number, width: number, height: number): void {
   const data = imageData.data;
-  const cx = width / 2;
-  const cy = height / 2;
-  const maxDist = Math.sqrt(cx * cx + cy * cy);
+  const vignetteLUT = buildVignetteLUT(width, height, amount);
 
-  for (let y = 0; y < height; y++) {
-    for (let x = 0; x < width; x++) {
-      const idx = (y * width + x) * 4;
-      const dx = x - cx;
-      const dy = y - cy;
-      const dist = Math.sqrt(dx * dx + dy * dy) / maxDist;
-
-      // Smooth vignette falloff
-      const vignette = 1 - amount * dist * dist * 1.5;
-      const v = Math.max(0, vignette);
-
-      data[idx] = Math.round(data[idx] * v);
-      data[idx + 1] = Math.round(data[idx + 1] * v);
-      data[idx + 2] = Math.round(data[idx + 2] * v);
-    }
+  for (let i = 0; i < width * height; i++) {
+    const idx = i * 4;
+    const v = vignetteLUT[i] / 255;
+    data[idx] = Math.round(data[idx] * v);
+    data[idx + 1] = Math.round(data[idx + 1] * v);
+    data[idx + 2] = Math.round(data[idx + 2] * v);
   }
 }
+

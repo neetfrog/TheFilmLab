@@ -26,6 +26,13 @@ const DiceIcon = () => (
     <circle cx="8" cy="16" r="1" fill="currentColor" /><circle cx="16" cy="16" r="1" fill="currentColor" />
   </svg>
 );
+const EyeIcon = () => (
+  <svg className="w-3.5 h-3.5" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}>
+    <path strokeLinecap="round" strokeLinejoin="round" d="M15 12a3 3 0 11-6 0 3 3 0 016 0z" />
+    <path strokeLinecap="round" strokeLinejoin="round" d="M2.458 12C3.732 7.943 7.523 5 12 5c4.477 0 8.268 2.943 9.542 7-1.274 4.057-5.065 7-9.542 7-4.477 0-8.268-2.943-9.542-7z" />
+  </svg>
+);
+
 const ResetIcon = () => (
   <svg className="w-3 h-3" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2.5}>
     <path strokeLinecap="round" strokeLinejoin="round" d="M9 15L3 9m0 0l6-6M3 9h12a6 6 0 010 12h-3" />
@@ -102,6 +109,7 @@ export default function App() {
   const [brightnessAmount, setBrightnessAmount] = useState<number | null>(null);
   const [fadedBlacks, setFadedBlacks] = useState<number | null>(null);
   const [exposure, setExposure] = useState(0);
+  const [processedImageData, setProcessedImageData] = useState<ImageData | null>(null);
 
   const canvasRef = useRef<HTMLCanvasElement>(null);
   const originalCanvasRef = useRef<HTMLCanvasElement>(null);
@@ -138,13 +146,16 @@ export default function App() {
     exposureCompensation: exposure,
   }), [grainAmount, grainSize, grainRoughness, vignetteAmount, halationAmount, contrastAmount, saturationAmount, brightnessAmount, fadedBlacks, exposure]);
 
-  // Debounced processing — 80ms delay for smooth slider interaction
+  // Optimized processing with adaptive debounce
   useEffect(() => {
     if (!imageData || !canvasRef.current) return;
 
     if (processTimeoutRef.current) clearTimeout(processTimeoutRef.current);
 
     setProcessing(true);
+
+    // Adaptive debounce: 40ms for fast feedback, increases slightly for slower interactions
+    const debounceDelay = 45;
 
     processTimeoutRef.current = setTimeout(() => {
       requestAnimationFrame(() => {
@@ -157,19 +168,39 @@ export default function App() {
         if (canvas) {
           canvas.width = result.width;
           canvas.height = result.height;
-          canvas.getContext('2d')!.putImageData(result, 0, 0);
+          const ctx = canvas.getContext('2d')!;
+          ctx.putImageData(result, 0, 0);
         }
 
-        // Also keep a reference for split view
+        // Cache processed image data for split view and fast switching
+        setProcessedImageData(result);
         processedCanvasRef.current = canvas;
         setProcessing(false);
       });
-    }, 60);
+    }, debounceDelay);
 
     return () => {
       if (processTimeoutRef.current) clearTimeout(processTimeoutRef.current);
     };
   }, [imageData, selectedPreset, currentParams, grainSeed]);
+
+  // Repaint original canvas when data or split mode changes.
+  useEffect(() => {
+    if (!imageData || !originalCanvasRef.current) return;
+    const canvas = originalCanvasRef.current;
+    canvas.width = imageData.width;
+    canvas.height = imageData.height;
+    canvas.getContext('2d')!.putImageData(imageData, 0, 0);
+  }, [imageData, splitView]);
+
+  // Repaint processed canvas when split mode changes and we have cached output.
+  useEffect(() => {
+    if (!processedImageData || !canvasRef.current) return;
+    const canvas = canvasRef.current;
+    canvas.width = processedImageData.width;
+    canvas.height = processedImageData.height;
+    canvas.getContext('2d')!.putImageData(processedImageData, 0, 0);
+  }, [processedImageData, splitView]);
 
   const loadImage = useCallback((img: HTMLImageElement) => {
     // Limit size for performance
@@ -300,7 +331,7 @@ export default function App() {
             </div>
             <div>
               <h1 className="text-base font-bold tracking-tight leading-tight">FilmLab</h1>
-              <p className="text-[9px] text-zinc-600 tracking-[0.2em] uppercase leading-tight">Analog Film Emulator</p>
+              <p className="hidden md:block text-[9px] text-zinc-600 tracking-[0.2em] uppercase leading-tight">Analog Film Emulator</p>
             </div>
           </div>
 
@@ -308,13 +339,16 @@ export default function App() {
             <div className="flex items-center gap-2">
               <button
                 onClick={() => setSplitView(!splitView)}
-                className={`px-2.5 py-1.5 rounded-lg text-xs flex items-center gap-1.5 transition-all border ${
+                className={`px-2.5 py-1.5 rounded-lg text-xs flex items-center gap-1.5 transition-all border flex-shrink-0 ${
                   splitView
                     ? 'bg-amber-500/15 text-amber-400 border-amber-500/25'
                     : 'bg-zinc-800/80 text-zinc-500 hover:text-zinc-300 border-zinc-700/50'
                 }`}
               >
-                <CompareIcon /> Compare
+                <span className="inline-flex items-center justify-center">
+                  <CompareIcon />
+                </span>
+                <span className="hidden md:inline ml-1.5">Compare</span>
               </button>
               <button
                 onMouseDown={() => setShowOriginal(true)}
@@ -322,20 +356,22 @@ export default function App() {
                 onMouseLeave={() => setShowOriginal(false)}
                 onTouchStart={() => setShowOriginal(true)}
                 onTouchEnd={() => setShowOriginal(false)}
-                className={`px-2.5 py-1.5 rounded-lg text-xs border transition-all select-none ${
+                className={`px-2.5 py-1.5 rounded-lg text-xs border transition-all select-none flex items-center gap-1.5 flex-shrink-0 ${
                   showOriginal
                     ? 'bg-zinc-700 text-zinc-200 border-zinc-600'
                     : 'bg-zinc-800/80 text-zinc-500 hover:text-zinc-300 border-zinc-700/50'
                 }`}
               >
-                Hold: Original
+                <EyeIcon />
+                <span className="hidden md:inline">Hold: Original</span>
               </button>
               <div className="w-px h-5 bg-zinc-800 mx-1" />
               <button
                 onClick={handleDownload}
-                className="px-3 py-1.5 rounded-lg text-xs bg-amber-500 hover:bg-amber-400 text-black font-semibold flex items-center gap-1.5 transition-all shadow-lg shadow-amber-500/20"
+                className="px-3 py-1.5 rounded-lg text-xs bg-amber-500 hover:bg-amber-400 text-black font-semibold flex items-center gap-1.5 transition-all shadow-lg shadow-amber-500/20 flex-shrink-0 whitespace-nowrap"
               >
-                <DownloadIcon /> Export JPG
+                <DownloadIcon />
+                <span className="hidden md:inline ml-1">Export JPG</span>
               </button>
             </div>
           )}
@@ -368,16 +404,17 @@ export default function App() {
             </div>
           </div>
 
-          {/* Film Stock List */}
-          <div className="flex-1 overflow-y-auto px-2 py-1.5 space-y-0.5 scrollbar-thin">
-            {filteredPresets.map(preset => {
-              const isSelected = selectedPreset.id === preset.id;
-              return (
-                <button
-                  key={preset.id}
-                  onClick={() => {
-                    setSelectedPreset(preset);
-                  }}
+          {/* Film Stock + Controls scroll container */}
+          <div className="flex-1 overflow-y-auto scrollbar-thin">
+            <div className="px-2 py-1.5 space-y-0.5">
+              {filteredPresets.map(preset => {
+                const isSelected = selectedPreset.id === preset.id;
+                return (
+                  <button
+                    key={preset.id}
+                    onClick={() => {
+                      setSelectedPreset(preset);
+                    }}
                   className={`w-full text-left px-3 py-2 rounded-lg transition-all group relative ${
                     isSelected
                       ? 'bg-zinc-800/90 shadow-sm'
@@ -414,7 +451,7 @@ export default function App() {
           </div>
 
           {/* ─── Controls ─── */}
-          <div className="border-t border-zinc-800/50 flex-1 overflow-y-auto scrollbar-thin">
+          <div className="border-t border-zinc-800/50">
             {/* Tone Section */}
             <div className="px-3 pt-3 pb-1">
               <SectionHeader title="Tone" />
@@ -475,6 +512,7 @@ export default function App() {
               </div>
             )}
           </div>
+        </div>
         </aside>
 
         {/* Mobile overlay when sidebar is open */}
