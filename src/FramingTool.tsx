@@ -346,7 +346,7 @@ export default function FramingTool({ isOpen, onClose, initialImage }: FramingTo
                       </div>
                       <input
                         type="range"
-                        min="2"
+                        min="0"
                         max="30"
                         value={padding}
                         onChange={(e) => setPadding(parseInt(e.target.value))}
