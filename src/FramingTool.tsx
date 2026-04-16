@@ -140,37 +140,47 @@ export default function FramingTool({ isOpen, onClose, initialImage }: FramingTo
     setProcessing(true);
 
     const targetRatio = selectedPreset.ratio;
-    const outputSize = 1440; // High quality export size
-
-    let canvasWidth: number;
-    let canvasHeight: number;
-
-    if (targetRatio >= 1) {
-      canvasWidth = outputSize;
-      canvasHeight = outputSize / targetRatio;
-    } else {
-      canvasHeight = outputSize;
-      canvasWidth = outputSize * targetRatio;
-    }
 
     const canvas = document.createElement('canvas');
-    canvas.width = canvasWidth;
-    canvas.height = canvasHeight;
-
     const ctx = canvas.getContext('2d')!;
-    ctx.fillStyle = frameColor;
-    ctx.fillRect(0, 0, canvasWidth, canvasHeight);
-
-    const paddingFactor = 1 - padding / 100;
-    const maxWidth = canvasWidth * paddingFactor;
-    const maxHeight = canvasHeight * paddingFactor;
 
     const image = new Image();
     image.crossOrigin = 'anonymous';
 
     await new Promise<void>((resolve) => {
       image.onload = () => {
-        const imageRatio = image.width / image.height;
+        const sourceWidth = image.width;
+        const sourceHeight = image.height;
+
+        let canvasWidth: number;
+        let canvasHeight: number;
+
+        if (targetRatio >= 1) {
+          canvasWidth = sourceWidth;
+          canvasHeight = canvasWidth / targetRatio;
+          if (canvasHeight > sourceHeight) {
+            canvasHeight = sourceHeight;
+            canvasWidth = canvasHeight * targetRatio;
+          }
+        } else {
+          canvasHeight = sourceHeight;
+          canvasWidth = canvasHeight * targetRatio;
+          if (canvasWidth > sourceWidth) {
+            canvasWidth = sourceWidth;
+            canvasHeight = canvasWidth / targetRatio;
+          }
+        }
+
+        canvas.width = Math.round(canvasWidth);
+        canvas.height = Math.round(canvasHeight);
+        ctx.fillStyle = frameColor;
+        ctx.fillRect(0, 0, canvas.width, canvas.height);
+
+        const paddingFactor = 1 - padding / 100;
+        const maxWidth = canvas.width * paddingFactor;
+        const maxHeight = canvas.height * paddingFactor;
+
+        const imageRatio = sourceWidth / sourceHeight;
         let drawWidth: number;
         let drawHeight: number;
 
@@ -182,8 +192,8 @@ export default function FramingTool({ isOpen, onClose, initialImage }: FramingTo
           drawWidth = maxHeight * imageRatio;
         }
 
-        const x = (canvasWidth - drawWidth) / 2;
-        const y = (canvasHeight - drawHeight) / 2;
+        const x = (canvas.width - drawWidth) / 2;
+        const y = (canvas.height - drawHeight) / 2;
 
         ctx.drawImage(image, x, y, drawWidth, drawHeight);
         resolve();
