@@ -1302,12 +1302,85 @@ export default function App() {
           ? 4 / 3
           : 16 / 9;
 
-    const clampRect = (rect: CropRect) => ({
-      x: Math.min(Math.max(0, rect.x), 1 - rect.w),
-      y: Math.min(Math.max(0, rect.y), 1 - rect.h),
-      w: Math.min(Math.max(0.05, rect.w), 1),
-      h: Math.min(Math.max(0.05, rect.h), 1),
-    });
+    const clampRect = (rect: CropRect) => {
+      let x = rect.x;
+      let y = rect.y;
+      let w = Math.max(minSize, Math.min(rect.w, 1));
+      let h = Math.max(minSize, Math.min(rect.h, 1));
+
+      if (cropRatio !== 'original') {
+        if (type === 'nw') {
+          const right = start.x + start.w;
+          const bottom = start.y + start.h;
+          x = Math.max(0, Math.min(x, right - minSize));
+          y = Math.max(0, Math.min(y, bottom - minSize));
+          w = right - x;
+          h = bottom - y;
+          if (w / h > aspectRatio) {
+            w = h * aspectRatio;
+            x = right - w;
+          } else {
+            h = w / aspectRatio;
+            y = bottom - h;
+          }
+          x = Math.max(0, x);
+          y = Math.max(0, y);
+        } else if (type === 'ne') {
+          const left = start.x;
+          const bottom = start.y + start.h;
+          x = left;
+          y = Math.max(0, Math.min(y, bottom - minSize));
+          h = bottom - y;
+          w = Math.max(minSize, h * aspectRatio);
+          if (x + w > 1) {
+            w = 1 - x;
+            h = w / aspectRatio;
+            y = bottom - h;
+          }
+        } else if (type === 'sw') {
+          const top = start.y;
+          const right = start.x + start.w;
+          y = top;
+          x = Math.max(0, Math.min(x, right - minSize));
+          w = right - x;
+          h = Math.max(minSize, w / aspectRatio);
+          if (y + h > 1) {
+            h = 1 - y;
+            w = h * aspectRatio;
+            x = right - w;
+          }
+        } else if (type === 'se') {
+          x = Math.max(0, Math.min(x, 1 - w));
+          y = Math.max(0, Math.min(y, 1 - h));
+          if (x + w > 1) {
+            w = 1 - x;
+            h = w / aspectRatio;
+          }
+          if (y + h > 1) {
+            h = 1 - y;
+            w = h * aspectRatio;
+          }
+          if (w < minSize) {
+            w = minSize;
+            h = w / aspectRatio;
+          }
+          if (h < minSize) {
+            h = minSize;
+            w = h * aspectRatio;
+          }
+        }
+      } else {
+        x = Math.min(Math.max(0, x), 1 - w);
+        y = Math.min(Math.max(0, y), 1 - h);
+      }
+
+      return {
+        x,
+        y,
+        w: Math.max(minSize, Math.min(w, 1)),
+        h: Math.max(minSize, Math.min(h, 1)),
+      };
+    };
 
     let next = { ...start };
     const minSize = 0.05;
@@ -1336,43 +1409,59 @@ export default function App() {
       }
 
       if (cropRatio !== 'original') {
-        if (type === 'nw' || type === 'se') {
+        const widthDelta = type === 'nw' || type === 'sw' ? -dx : dx;
+        const heightDelta = type === 'nw' || type === 'ne' ? -dy : dy;
+        const rawWidth = start.w + (type === 'nw' || type === 'sw' ? -dx : dx);
+        const rawHeight = start.h + (type === 'nw' || type === 'ne' ? -dy : dy);
+
+        if (Math.abs(widthDelta) > Math.abs(heightDelta * aspectRatio)) {
+          newW = Math.max(minSize, rawWidth);
           newH = Math.max(minSize, newW / aspectRatio);
-          if (type === 'nw') newY = start.y + (start.h - newH);
-        } else if (type === 'ne' || type === 'sw') {
+          if (type === 'nw' || type === 'sw') {
+            newX = start.x + (start.w - newW);
+          }
+          if (type === 'nw' || type === 'ne') {
+            newY = start.y + (start.h - newH);
+          }
+        } else {
+          newH = Math.max(minSize, rawHeight);
           newW = Math.max(minSize, newH * aspectRatio);
-          if (type === 'ne') newX = start.x;
-          if (type === 'sw') newX = start.x + (start.w - newW);
+          if (type === 'nw' || type === 'sw') {
+            newX = start.x + (start.w - newW);
+          }
+          if (type === 'nw' || type === 'ne') {
+            newY = start.y + (start.h - newH);
+          }
         }
       }
 
       if (type === 'nw') {
         next = {
-          x: Math.min(Math.max(0, newX), start.x + start.w - minSize),
-          y: Math.min(Math.max(0, newY), start.y + start.h - minSize),
-          w: Math.min(Math.max(minSize, start.x + start.w - newX), 1),
-          h: Math.min(Math.max(minSize, start.y + start.h - newY), 1),
+          x: newX,
+          y: newY,
+          w: start.x + start.w - newX,
+          h: start.y + start.h - newY,
         };
       } else if (type === 'ne') {
         next = {
           x: start.x,
-          y: Math.min(Math.max(0, newY), start.y + start.h - minSize),
-          w: Math.min(Math.max(minSize, newW), 1 - start.x),
-          h: Math.min(Math.max(minSize, start.y + start.h - newY), 1),
+          y: newY,
+          w: newW,
+          h: start.y + start.h - newY,
         };
       } else if (type === 'sw') {
         next = {
-          x: Math.min(Math.max(0, newX), start.x + start.w - minSize),
+          x: newX,
           y: start.y,
-          w: Math.min(Math.max(minSize, start.x + start.w - newX), 1),
-          h: Math.min(Math.max(minSize, newH), 1 - start.y),
+          w: start.x + start.w - newX,
+          h: newH,
         };
       } else if (type === 'se') {
         next = {
           x: start.x,
           y: start.y,
-          w: Math.min(Math.max(minSize, newW), 1 - start.x),
-          h: Math.min(Math.max(minSize, newH), 1 - start.y),
+          w: newW,
+          h: newH,
         };
       }
     }
@@ -2208,7 +2297,10 @@ export default function App() {
                 {['original', '1:1', '4:3', '16:9'].map((ratio) => (
                   <button
                     key={ratio}
-                    onClick={() => setCropRatio(ratio as 'original' | '1:1' | '4:3' | '16:9')}
+                    onClick={() => {
+                      setCropRatio(ratio as 'original' | '1:1' | '4:3' | '16:9');
+                      setCropMode(true);
+                    }}
                     className={`px-2 py-1 rounded-md text-[10px] transition-all ${cropRatio === ratio ? 'bg-amber-500 text-black' : 'bg-zinc-800 text-zinc-300 hover:bg-zinc-700'}`}
                   >
                     {ratio.toUpperCase()}

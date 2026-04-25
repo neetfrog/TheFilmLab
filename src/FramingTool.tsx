@@ -277,21 +277,24 @@ export default function FramingTool({ isOpen, onClose, initialImage }: FramingTo
                     </div>
                   </div>
 
-                  {/* Controls Grid */}
-                  <div className="grid gap-3">
-                    {/* Aspect Ratio */}
-                    <div>
-                      <label className="text-xs font-semibold text-zinc-300 uppercase tracking-wider mb-2 block">
-                        Aspect Ratio
-                      </label>
-                      <div className="grid grid-cols-3 gap-1.5">
+                  {/* Controls */}
+                  <div className="space-y-4">
+                    <div className="rounded-3xl border border-zinc-700/60 bg-zinc-950/60 p-4">
+                      <div className="flex items-center justify-between gap-4 mb-3">
+                        <div>
+                          <p className="text-xs uppercase tracking-[0.2em] text-zinc-500">Crop</p>
+                          <h3 className="text-sm font-semibold text-white">Aspect ratio</h3>
+                        </div>
+                        <span className="text-xs text-zinc-400">{selectedPreset.name}</span>
+                      </div>
+                      <div className="flex flex-wrap gap-2">
                         {framePresets.map((preset) => (
                           <button
                             key={preset.name}
                             onClick={() => setSelectedPreset(preset)}
-                            className={`px-2 py-2 rounded text-[12px] font-medium transition-all ${
+                            className={`rounded-full px-3 py-2 text-[12px] font-medium transition ${
                               selectedPreset.name === preset.name
-                                ? 'bg-amber-500 text-black'
+                                ? 'bg-amber-500 text-black shadow-sm'
                                 : 'bg-zinc-800 text-zinc-300 hover:bg-zinc-700'
                             }`}
                           >
@@ -301,58 +304,53 @@ export default function FramingTool({ isOpen, onClose, initialImage }: FramingTo
                       </div>
                     </div>
 
-                    {/* Frame Color */}
-                    <div>
-                      <label className="text-xs font-semibold text-zinc-300 uppercase tracking-wider mb-2 block">
-                        Frame Color
-                      </label>
-                      <div className="grid grid-cols-3 gap-2 mb-2">
+                    <div className="rounded-3xl border border-zinc-700/60 bg-zinc-950/60 p-4">
+                      <div className="flex items-center justify-between gap-4 mb-3">
+                        <div>
+                          <p className="text-xs uppercase tracking-[0.2em] text-zinc-500">Frame</p>
+                          <h3 className="text-sm font-semibold text-white">Color</h3>
+                        </div>
+                        <button
+                          type="button"
+                          onClick={() => setFrameColor('#FFFFFF')}
+                          className="text-xs text-zinc-400 hover:text-white"
+                        >
+                          Reset
+                        </button>
+                      </div>
+                      <div className="flex flex-wrap gap-2">
                         {frameColors.map((color) => (
                           <button
                             key={color.value}
                             onClick={() => setFrameColor(color.value)}
-                            className={`px-2 py-1.5 rounded text-xs font-medium transition-all flex items-center gap-1.5 border ${
+                            className={`h-10 w-10 rounded-full border-2 transition ${
                               frameColor === color.value
-                                ? 'border-amber-500 bg-amber-500/10'
-                                : 'border-zinc-700/50 bg-zinc-800/50 hover:border-zinc-500'
+                                ? 'border-amber-500 shadow-inner'
+                                : 'border-zinc-700/80 hover:border-zinc-500'
                             }`}
-                          >
-                            <div
-                              className="w-3 h-3 rounded-full border border-zinc-600"
-                              style={{ backgroundColor: color.value }}
-                            />
-                            <span className="hidden sm:inline text-[10px]">{color.name}</span>
-                          </button>
+                            style={{ backgroundColor: color.value }}
+                            aria-label={color.name}
+                          />
                         ))}
-                      </div>
-                      {/* Custom color */}
-                      <div className="flex gap-2">
-                        <input
-                          type="color"
-                          value={frameColor}
-                          onChange={(e) => setFrameColor(e.target.value)}
-                          className="w-10 h-10 rounded cursor-pointer border-0"
-                        />
-                        <input
-                          type="text"
-                          value={frameColor}
-                          onChange={(e) => {
-                            if (/^#[0-9A-Fa-f]{6}$/.test(e.target.value)) {
-                              setFrameColor(e.target.value);
-                            }
-                          }}
-                          className="flex-1 bg-zinc-800 text-white px-2 py-2 rounded text-xs uppercase font-mono border border-zinc-700"
-                          placeholder="#FFFFFF"
-                        />
+                        <label className="flex items-center justify-center h-10 w-10 rounded-full border border-zinc-700/80 bg-zinc-900 text-zinc-300 cursor-pointer hover:border-amber-500">
+                          <input
+                            type="color"
+                            value={frameColor}
+                            onChange={(e) => setFrameColor(e.target.value)}
+                            className="absolute inset-0 h-full w-full opacity-0 cursor-pointer"
+                          />
+                          <span className="text-sm">+</span>
+                        </label>
                       </div>
                     </div>
 
-                    {/* Padding Slider */}
-                    <div>
-                      <div className="flex items-center justify-between mb-2">
-                        <label className="text-xs font-semibold text-zinc-300 uppercase tracking-wider">
-                          Padding: {padding}%
-                        </label>
+                    <div className="rounded-3xl border border-zinc-700/60 bg-zinc-950/60 p-4">
+                      <div className="flex items-center justify-between gap-4 mb-2">
+                        <div>
+                          <p className="text-xs uppercase tracking-[0.2em] text-zinc-500">Padding</p>
+                          <h3 className="text-sm font-semibold text-white">{padding}%</h3>
+                        </div>
+                        <span className="text-xs text-zinc-500">Image spacing</span>
                       </div>
                       <input
                         type="range"
@@ -360,61 +358,60 @@ export default function FramingTool({ isOpen, onClose, initialImage }: FramingTo
                         max="30"
                         value={padding}
                         onChange={(e) => setPadding(parseInt(e.target.value))}
-                        className="w-full h-2 bg-zinc-800 rounded-lg appearance-none cursor-pointer accent-amber-500"
+                        className="w-full h-2 rounded-lg bg-zinc-800 accent-amber-500 cursor-pointer"
                       />
-                      <div className="flex justify-between text-zinc-500 text-xs mt-1">
-                        <span>Minimal</span>
-                        <span>Large</span>
-                      </div>
                     </div>
                   </div>
                 </div>
 
                 {/* Right: Image List */}
-                <div>
-                  <h3 className="text-sm font-semibold text-white mb-2 flex items-center gap-2">
-                    <span>🖼️</span> Images ({images.length})
-                  </h3>
-                  <div className="space-y-1.5 max-h-96 overflow-y-auto">
-                    {images.map((img, index) => (
+                <div className="space-y-4">
+                  <div className="rounded-3xl border border-zinc-700/60 bg-zinc-950/60 p-4">
+                    <div className="flex items-center justify-between gap-3 mb-3">
+                      <div>
+                        <p className="text-xs uppercase tracking-[0.2em] text-zinc-500">Images</p>
+                        <h3 className="text-sm font-semibold text-white">{images.length} loaded</h3>
+                      </div>
                       <button
-                        key={index}
-                        onClick={() => setSelectedIndex(index)}
-                        className={`flex items-center gap-2 p-2 rounded-lg w-full transition-all text-left ${
-                          selectedIndex === index
-                            ? 'bg-amber-500/30 ring-1 ring-amber-500'
-                            : 'bg-zinc-800/50 hover:bg-zinc-800 '
-                        }`}
+                        onClick={() => fileInputRef.current?.click()}
+                        className="rounded-full border border-zinc-700/80 bg-zinc-800 px-3 py-2 text-xs text-zinc-300 hover:bg-zinc-700"
                       >
-                        <img
-                          src={img.url}
-                          alt=""
-                          className="w-10 h-10 object-cover rounded"
-                        />
-                        <div className="flex-1 min-w-0">
-                          <p className="text-white text-xs truncate font-medium">{img.file.name}</p>
-                          <p className="text-zinc-500 text-[10px]">
-                            {img.width} × {img.height}
-                          </p>
-                        </div>
-                        <button
-                          onClick={(e) => {
-                            e.stopPropagation();
-                            removeImage(index);
-                          }}
-                          className="text-red-400 hover:text-red-300 text-sm p-1 flex-shrink-0"
-                        >
-                          ✕
-                        </button>
+                        Add
                       </button>
-                    ))}
+                    </div>
+                    <div className="space-y-2 max-h-96 overflow-y-auto">
+                      {images.map((img, index) => (
+                        <button
+                          key={index}
+                          onClick={() => setSelectedIndex(index)}
+                          className={`group flex items-center gap-3 w-full rounded-3xl border px-3 py-3 text-left transition ${
+                            selectedIndex === index
+                              ? 'border-amber-500 bg-amber-500/10'
+                              : 'border-zinc-800 bg-zinc-900/60 hover:border-zinc-600'
+                          }`}
+                        >
+                          <img
+                            src={img.url}
+                            alt=""
+                            className="h-12 w-12 rounded-2xl object-cover"
+                          />
+                          <div className="flex-1 min-w-0">
+                            <p className="truncate text-sm font-medium text-white">{img.file.name}</p>
+                            <p className="text-xs text-zinc-500">{img.width} × {img.height}</p>
+                          </div>
+                          <span
+                            className="block rounded-full border border-zinc-700 px-2 py-1 text-[10px] text-zinc-400 hover:border-red-400 hover:text-red-300 cursor-pointer"
+                            onClick={(e) => {
+                              e.stopPropagation();
+                              removeImage(index);
+                            }}
+                          >
+                            Remove
+                          </span>
+                        </button>
+                      ))}
+                    </div>
                   </div>
-                  <button
-                    onClick={() => fileInputRef.current?.click()}
-                    className="w-full mt-3 px-3 py-2 rounded-lg bg-zinc-800 text-zinc-300 hover:bg-zinc-700 text-xs font-medium transition-all"
-                  >
-                    + Add Images
-                  </button>
                 </div>
               </div>
             </>
