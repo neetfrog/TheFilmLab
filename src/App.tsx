@@ -1,246 +1,65 @@
-import { useState, useRef, useCallback, useEffect, useMemo, useLayoutEffect, type ReactNode } from 'react';
+import { useState, useRef, useCallback, useEffect, useMemo, useLayoutEffect } from 'react';
 import { filmPresets, FilmPreset } from './filmPresets';
 import { processImage, ProcessingParams } from './filmProcessor';
 import FramingTool from './FramingTool';
 import logo from './favicon/logo.png';
+import SectionHeader from './components/SectionHeader';
+import SliderControl from './components/SliderControl';
+import LevelsHistogram from './components/LevelsHistogram';
+import OriginalOverlay from './components/OriginalOverlay';
+import {
+  PRESET_STORAGE_KEY,
+  FAVORITES_STORAGE_KEY,
+  loadFromStorage,
+  saveToStorage,
+  typeLabels,
+  typeColors,
+  typeBadge,
+  DEMO_IMAGES,
+  UploadIcon,
+  DownloadIcon,
+  CompareIcon,
+  DiceIcon,
+  EyeIcon,
+  ResetIcon,
+  LevelsIcon,
+  ToneIcon,
+  GrainIcon,
+  EffectsIcon,
+  OpticalIcon,
+  OverlayIcon,
+  FrameIcon,
+  WhiteBalanceIcon,
+  ExposureIcon,
+  ContrastIcon,
+  BrightnessIcon,
+  SaturationIcon,
+  FadedBlacksIcon,
+  GrainIconSmall,
+  VignetteIcon,
+  HalationIcon,
+  PurpleFringingIcon,
+  LensDistortionIcon,
+  ColorShiftIcon,
+  CropIcon,
+  PresetIcon,
+  StarIcon,
+  MenuIcon,
+  ChevronLeftIcon,
+  ChevronRightIcon,
+  OVERLAYS,
+  FilmType,
+  FRAME_URLS,
+  BLEND_MODES,
+  CANVAS_BLEND,
+  drawImageCover,
+  rotateImageData,
+  cropImageDataRect,
+  OverlayCategory,
+  BlendMode,
+} from './App.helpers';
 
-// ─── Icons ───────────────────────────────────────────────
-const UploadIcon = () => (
-  <svg className="w-12 h-12" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={1.5}>
-    <path strokeLinecap="round" strokeLinejoin="round" d="M3 16.5v2.25A2.25 2.25 0 005.25 21h13.5A2.25 2.25 0 0021 18.75V16.5m-13.5-9L12 3m0 0l4.5 4.5M12 3v13.5" />
-  </svg>
-);
-const DownloadIcon = () => (
-  <svg className="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}>
-    <path strokeLinecap="round" strokeLinejoin="round" d="M3 16.5v2.25A2.25 2.25 0 005.25 21h13.5A2.25 2.25 0 0021 18.75V16.5M16.5 12L12 16.5m0 0L7.5 12m4.5 4.5V3" />
-  </svg>
-);
-const CompareIcon = () => (
-  <svg className="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}>
-    <path strokeLinecap="round" strokeLinejoin="round" d="M7.5 21L3 16.5m0 0L7.5 12M3 16.5h13.5m0-13.5L21 7.5m0 0L16.5 12M21 7.5H7.5" />
-  </svg>
-);
-const DiceIcon = () => (
-  <svg className="w-3.5 h-3.5" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}>
-    <path strokeLinecap="round" strokeLinejoin="round" d="M3.75 6A2.25 2.25 0 016 3.75h12A2.25 2.25 0 0120.25 6v12A2.25 2.25 0 0118 20.25H6A2.25 2.25 0 013.75 18V6z" />
-    <circle cx="8" cy="8" r="1" fill="currentColor" /><circle cx="16" cy="8" r="1" fill="currentColor" />
-    <circle cx="12" cy="12" r="1" fill="currentColor" />
-    <circle cx="8" cy="16" r="1" fill="currentColor" /><circle cx="16" cy="16" r="1" fill="currentColor" />
-  </svg>
-);
-const EyeIcon = () => (
-  <svg className="w-3.5 h-3.5" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}>
-    <path strokeLinecap="round" strokeLinejoin="round" d="M15 12a3 3 0 11-6 0 3 3 0 016 0z" />
-    <path strokeLinecap="round" strokeLinejoin="round" d="M2.458 12C3.732 7.943 7.523 5 12 5c4.477 0 8.268 2.943 9.542 7-1.274 4.057-5.065 7-9.542 7-4.477 0-8.268-2.943-9.542-7z" />
-  </svg>
-);
 
-const ResetIcon = () => (
-  <svg className="w-3 h-3" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2.5}>
-    <path strokeLinecap="round" strokeLinejoin="round" d="M9 15L3 9m0 0l6-6M3 9h12a6 6 0 010 12h-3" />
-  </svg>
-);
-
-const SectionIcon = ({ children }: { children: ReactNode }) => (
-  <span className="inline-flex items-center justify-center w-4 h-4 rounded-full bg-zinc-800 text-zinc-400">
-    {children}
-  </span>
-);
-
-const LevelsIcon = () => (
-  <SectionIcon>
-    <svg className="w-3 h-3" viewBox="0 0 20 20" fill="none" stroke="currentColor" strokeWidth={2}>
-      <path d="M3 14V6m4 8V8m4 6V4m4 10V10" strokeLinecap="round" strokeLinejoin="round" />
-    </svg>
-  </SectionIcon>
-);
-
-const ToneIcon = () => (
-  <SectionIcon>
-    <svg className="w-3 h-3" viewBox="0 0 20 20" fill="none" stroke="currentColor" strokeWidth={2}>
-      <path d="M10 4V2m0 16v-2m8-6h2M0 10h2m14.14-5.86l1.42-1.42M2.44 17.56l1.42-1.42M17.56 17.56l-1.42-1.42M2.44 2.44l1.42 1.42" strokeLinecap="round" strokeLinejoin="round" />
-      <circle cx="10" cy="10" r="3" />
-    </svg>
-  </SectionIcon>
-);
-
-const GrainIcon = () => (
-  <SectionIcon>
-    <svg className="w-3 h-3" viewBox="0 0 20 20" fill="none" stroke="currentColor" strokeWidth={2}>
-      <circle cx="6" cy="6" r="1.5" fill="currentColor" />
-      <circle cx="14" cy="6" r="1.5" fill="currentColor" />
-      <circle cx="10" cy="14" r="1.5" fill="currentColor" />
-    </svg>
-  </SectionIcon>
-);
-
-const EffectsIcon = () => (
-  <SectionIcon>
-    <svg className="w-3 h-3" viewBox="0 0 20 20" fill="none" stroke="currentColor" strokeWidth={2}>
-      <path d="M10 3l1.5 4.5L16 9l-4 2L11.5 16 10 12 6 14l2-4-4-2 4.5-.5L10 3z" strokeLinecap="round" strokeLinejoin="round" />
-    </svg>
-  </SectionIcon>
-);
-
-const OpticalIcon = () => (
-  <SectionIcon>
-    <svg className="w-3 h-3" viewBox="0 0 20 20" fill="none" stroke="currentColor" strokeWidth={2}>
-      <path d="M2 10s3-6 8-6 8 6 8 6-3 6-8 6-8-6-8-6z" strokeLinecap="round" strokeLinejoin="round" />
-      <circle cx="10" cy="10" r="2.5" />
-    </svg>
-  </SectionIcon>
-);
-
-const OverlayIcon = () => (
-  <SectionIcon>
-    <svg className="w-3 h-3" viewBox="0 0 20 20" fill="none" stroke="currentColor" strokeWidth={2}>
-      <rect x="3" y="3" width="14" height="14" rx="2" />
-      <rect x="6" y="6" width="10" height="10" rx="1" fill="currentColor" opacity="0.15" />
-    </svg>
-  </SectionIcon>
-);
-
-const FrameIcon = () => (
-  <SectionIcon>
-    <svg className="w-3 h-3" viewBox="0 0 20 20" fill="none" stroke="currentColor" strokeWidth={2}>
-      <rect x="4" y="4" width="12" height="12" rx="1.5" strokeLinecap="round" strokeLinejoin="round" />
-      <path d="M8 4v4M4 8h4" strokeLinecap="round" />
-    </svg>
-  </SectionIcon>
-);
-
-const WhiteBalanceIcon = () => (
-  <span className="inline-flex items-center justify-center w-3.5 h-3.5 rounded-full bg-zinc-800 text-zinc-400">
-    <svg className="w-2.5 h-2.5" viewBox="0 0 20 20" fill="none" stroke="currentColor" strokeWidth={2}>
-      <path d="M10 4V2m0 16v-2m8-6h2M0 10h2" strokeLinecap="round" />
-      <circle cx="10" cy="10" r="3" />
-    </svg>
-  </span>
-);
-
-const ExposureIcon = () => (
-  <span className="inline-flex items-center justify-center w-3.5 h-3.5 rounded-full bg-zinc-800 text-zinc-400">
-    <svg className="w-2.5 h-2.5" viewBox="0 0 20 20" fill="none" stroke="currentColor" strokeWidth={2}>
-      <path d="M10 5V3m0 14v-2m5-5h2M3 10H5" strokeLinecap="round" />
-      <circle cx="10" cy="10" r="3" />
-    </svg>
-  </span>
-);
-
-const ContrastIcon = () => (
-  <span className="inline-flex items-center justify-center w-3.5 h-3.5 rounded-full bg-zinc-800 text-zinc-400">
-    <svg className="w-2.5 h-2.5" viewBox="0 0 20 20" fill="none" stroke="currentColor" strokeWidth={2}>
-      <path d="M10 4v12M6 4h8" strokeLinecap="round" />
-    </svg>
-  </span>
-);
-
-const BrightnessIcon = () => (
-  <span className="inline-flex items-center justify-center w-3.5 h-3.5 rounded-full bg-zinc-800 text-zinc-400">
-    <svg className="w-2.5 h-2.5" viewBox="0 0 20 20" fill="none" stroke="currentColor" strokeWidth={2}>
-      <path d="M10 6a4 4 0 100 8 4 4 0 000-8z" />
-      <path d="M10 2v2M10 16v2M4.22 4.22l1.42 1.42M14.36 14.36l1.42 1.42M2 10h2M16 10h2M4.22 15.78l1.42-1.42M14.36 5.64l1.42-1.42" strokeLinecap="round" />
-    </svg>
-  </span>
-);
-
-const SaturationIcon = () => (
-  <span className="inline-flex items-center justify-center w-3.5 h-3.5 rounded-full bg-zinc-800 text-zinc-400">
-    <svg className="w-2.5 h-2.5" viewBox="0 0 20 20" fill="none" stroke="currentColor" strokeWidth={2}>
-      <circle cx="10" cy="10" r="3" fill="currentColor" />
-      <path d="M10 2v3M10 15v3M2 10h3M15 10h3" strokeLinecap="round" />
-    </svg>
-  </span>
-);
-
-const FadedBlacksIcon = () => (
-  <span className="inline-flex items-center justify-center w-3.5 h-3.5 rounded-full bg-zinc-800 text-zinc-400">
-    <svg className="w-2.5 h-2.5" viewBox="0 0 20 20" fill="none" stroke="currentColor" strokeWidth={2}>
-      <path d="M4 16h12M4 12h10M4 8h8M4 4h6" strokeLinecap="round" />
-    </svg>
-  </span>
-);
-
-const GrainIconSmall = () => (
-  <span className="inline-flex items-center justify-center w-3.5 h-3.5 rounded-full bg-zinc-800 text-zinc-400">
-    <svg className="w-2.5 h-2.5" viewBox="0 0 20 20" fill="none" stroke="currentColor" strokeWidth={2}>
-      <path d="M6 6h.01M10 10h.01M14 14h.01" strokeLinecap="round" />
-    </svg>
-  </span>
-);
-
-const VignetteIcon = () => (
-  <span className="inline-flex items-center justify-center w-3.5 h-3.5 rounded-full bg-zinc-800 text-zinc-400">
-    <svg className="w-2.5 h-2.5" viewBox="0 0 20 20" fill="none" stroke="currentColor" strokeWidth={2}>
-      <circle cx="10" cy="10" r="4" />
-      <circle cx="10" cy="10" r="6" opacity="0.2" />
-    </svg>
-  </span>
-);
-
-const HalationIcon = () => (
-  <span className="inline-flex items-center justify-center w-3.5 h-3.5 rounded-full bg-zinc-800 text-zinc-400">
-    <svg className="w-2.5 h-2.5" viewBox="0 0 20 20" fill="none" stroke="currentColor" strokeWidth={2}>
-      <circle cx="10" cy="10" r="3" />
-      <circle cx="10" cy="10" r="5" opacity="0.25" />
-    </svg>
-  </span>
-);
-
-const PurpleFringingIcon = () => (
-  <span className="inline-flex items-center justify-center w-3.5 h-3.5 rounded-full bg-zinc-800 text-zinc-400">
-    <svg className="w-2.5 h-2.5" viewBox="0 0 20 20" fill="none" stroke="currentColor" strokeWidth={2}>
-      <circle cx="10" cy="10" r="3" />
-      <path d="M5 5l3 3M12 12l3 3" strokeLinecap="round" />
-    </svg>
-  </span>
-);
-
-const LensDistortionIcon = () => (
-  <span className="inline-flex items-center justify-center w-3.5 h-3.5 rounded-full bg-zinc-800 text-zinc-400">
-    <svg className="w-2.5 h-2.5" viewBox="0 0 20 20" fill="none" stroke="currentColor" strokeWidth={2}>
-      <path d="M4 10c2-4 6-4 8 0s6 4 8 0" strokeLinecap="round" />
-    </svg>
-  </span>
-);
-
-const ColorShiftIcon = () => (
-  <span className="inline-flex items-center justify-center w-3.5 h-3.5 rounded-full bg-zinc-800 text-zinc-400">
-    <svg className="w-2.5 h-2.5" viewBox="0 0 20 20" fill="none" stroke="currentColor" strokeWidth={2}>
-      <path d="M6 10h8M10 6l4 4-4 4" strokeLinecap="round" />
-    </svg>
-  </span>
-);
-
-const CropIcon = () => (
-  <SectionIcon>
-    <svg className="w-3 h-3" viewBox="0 0 20 20" fill="none" stroke="currentColor" strokeWidth={2}>
-      <path d="M6 3v4M6 3h4M14 17v-4M14 17h-4M17 6h-4M17 6v4M3 14h4M3 14v-4" strokeLinecap="round" strokeLinejoin="round" />
-    </svg>
-  </SectionIcon>
-);
-
-const PresetIcon = () => (
-  <SectionIcon>
-    <svg className="w-3 h-3" viewBox="0 0 20 20" fill="none" stroke="currentColor" strokeWidth={2}>
-      <path d="M4 6h12M4 10h12M4 14h8" strokeLinecap="round" />
-    </svg>
-  </SectionIcon>
-);
-
-const SliderLabelIcon = () => (
-  <span className="inline-flex items-center justify-center w-3.5 h-3.5 rounded-full bg-zinc-800 text-zinc-400">
-    <svg className="w-2.5 h-2.5" viewBox="0 0 20 20" fill="none" stroke="currentColor" strokeWidth={2}>
-      <circle cx="10" cy="10" r="2" />
-    </svg>
-  </span>
-);
-
-const StarIcon = ({ filled }: { filled?: boolean }) => (
-  <svg className="w-4 h-4" viewBox="0 0 24 24" fill={filled ? 'currentColor' : 'none'} stroke="currentColor" strokeWidth={2}>
-    <path strokeLinecap="round" strokeLinejoin="round" d="M11.049 2.927c.3-.921 1.603-.921 1.902 0l1.262 3.885a1 1 0 00.95.69h4.084c.969 0 1.371 1.24.588 1.81l-3.305 2.405a1 1 0 00-.364 1.118l1.262 3.885c.3.921-.755 1.688-1.54 1.118l-3.305-2.405a1 1 0 00-1.176 0l-3.305 2.405c-.784.57-1.838-.197-1.539-1.118l1.262-3.885a1 1 0 00-.364-1.118L2.115 9.312c-.783-.57-.38-1.81.588-1.81h4.084a1 1 0 00.95-.69l1.262-3.885z" />
-  </svg>
-);
 
 interface BatchImageEditState {
   selectedPreset: FilmPreset;
@@ -325,205 +144,6 @@ interface HistoryEntry {
   activeBatchIndex: number | null;
 }
 
-const PRESET_STORAGE_KEY = 'filmLabCustomPresets';
-const FAVORITES_STORAGE_KEY = 'filmLabFavorites';
-
-function loadFromStorage<T>(key: string, fallback: T): T {
-  if (typeof window === 'undefined') return fallback;
-  try {
-    const raw = window.localStorage.getItem(key);
-    return raw ? JSON.parse(raw) as T : fallback;
-  } catch {
-    return fallback;
-  }
-}
-
-function saveToStorage<T>(key: string, value: T) {
-  if (typeof window === 'undefined') return;
-  window.localStorage.setItem(key, JSON.stringify(value));
-}
-
-type FilmType = 'all' | 'color-negative' | 'bw-negative' | 'slide' | 'cinema';
-
-const typeLabels: Record<FilmType, string> = {
-  all: 'All',
-  'color-negative': 'Color',
-  'bw-negative': 'B&W',
-  slide: 'Slide',
-  cinema: 'Cine',
-};
-
-const typeColors: Record<string, string> = {
-  'color-negative': 'bg-amber-500/15 text-amber-400 border-amber-500/20',
-  'bw-negative': 'bg-zinc-500/15 text-zinc-300 border-zinc-500/25',
-  slide: 'bg-emerald-500/15 text-emerald-400 border-emerald-500/20',
-  cinema: 'bg-purple-500/15 text-purple-400 border-purple-500/20',
-};
-
-const typeBadge: Record<string, string> = {
-  'color-negative': 'C-41',
-  'bw-negative': 'B&W',
-  slide: 'E-6',
-  cinema: 'ECN',
-};
-
-// Demo image URLs (royalty free)
-const DEMO_IMAGES = [
-  { label: 'Portrait', url: 'https://images.unsplash.com/photo-1534528741775-53994a69daeb?w=1200&q=80' },
-  { label: 'Street', url: 'https://images.unsplash.com/photo-1477959858617-67f85cf4f1df?w=1200&q=80' },
-  { label: 'Landscape', url: 'https://images.unsplash.com/photo-1506905925346-21bda4d32df4?w=1200&q=80' },
-  { label: 'Still Life', url: 'https://images.unsplash.com/photo-1495195134817-aeb325a55b65?w=1200&q=80' },
-];
-
-const MenuIcon = () => (
-  <svg className="w-5 h-5" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}>
-    <path strokeLinecap="round" strokeLinejoin="round" d="M4 6h16M4 12h16M4 18h16" />
-  </svg>
-);
-
-const ChevronLeftIcon = () => (
-  <svg className="w-5 h-5" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}>
-    <path strokeLinecap="round" strokeLinejoin="round" d="M15 19l-7-7 7-7" />
-  </svg>
-);
-
-const ChevronRightIcon = () => (
-  <svg className="w-5 h-5" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}>
-    <path strokeLinecap="round" strokeLinejoin="round" d="M9 5l7 7-7 7" />
-  </svg>
-);
-
-// ─── Overlay / Frame Assets ───────────────────────────────────────────────────
-type OverlayCategory = 'lightleaks' | 'bokeh' | 'textures';
-type BlendMode = 'screen' | 'multiply' | 'overlay' | 'soft-light' | 'normal';
-
-const OVERLAYS: Record<OverlayCategory, { label: string; urls: string[]; thumbs: string[]; defaultBlend: BlendMode }> = {
-  lightleaks: {
-    label: 'Light Leaks',
-    urls: Object.values(import.meta.glob('./overlays/lightleak*.webp', { query: '?url', import: 'default', eager: true }) as Record<string, string>).sort(),
-    thumbs: Object.values(import.meta.glob('./overlays/thumbs/lightleak*.webp', { query: '?url', import: 'default', eager: true }) as Record<string, string>).sort(),
-    defaultBlend: 'screen',
-  },
-  bokeh: {
-    label: 'Bokeh',
-    urls: Object.values(import.meta.glob('./overlays/bokeh*.webp', { query: '?url', import: 'default', eager: true }) as Record<string, string>).sort(),
-    thumbs: Object.values(import.meta.glob('./overlays/thumbs/bokeh*.webp', { query: '?url', import: 'default', eager: true }) as Record<string, string>).sort(),
-    defaultBlend: 'screen',
-  },
-  textures: {
-    label: 'Textures',
-    urls: Object.values(import.meta.glob('./overlays/texture*.webp', { query: '?url', import: 'default', eager: true }) as Record<string, string>).sort(),
-    thumbs: Object.values(import.meta.glob('./overlays/thumbs/texture*.webp', { query: '?url', import: 'default', eager: true }) as Record<string, string>).sort(),
-    defaultBlend: 'multiply',
-  },
-};
-
-const FRAME_URLS = Object.values(
-  import.meta.glob('./frames/*.webp', { query: '?url', import: 'default', eager: true }) as Record<string, string>
-).sort();
-
-const BLEND_MODES: { value: BlendMode; label: string }[] = [
-  { value: 'screen',     label: 'Screen'   },
-  { value: 'multiply',   label: 'Multiply' },
-  { value: 'overlay',    label: 'Overlay'  },
-  { value: 'soft-light', label: 'Soft'     },
-  { value: 'normal',     label: 'Normal'   },
-];
-
-const CANVAS_BLEND: Record<BlendMode, GlobalCompositeOperation> = {
-  screen:      'screen',
-  multiply:    'multiply',
-  overlay:     'overlay',
-  'soft-light':'soft-light',
-  normal:      'source-over',
-};
-
-function drawImageCover(ctx: CanvasRenderingContext2D, img: HTMLImageElement, w: number, h: number) {
-  const imgAR = img.naturalWidth / img.naturalHeight;
-  const canvasAR = w / h;
-  let sx = 0, sy = 0, sw = img.naturalWidth, sh = img.naturalHeight;
-  if (imgAR > canvasAR) {
-    sw = img.naturalHeight * canvasAR;
-    sx = (img.naturalWidth - sw) / 2;
-  } else {
-    sh = img.naturalWidth / canvasAR;
-    sy = (img.naturalHeight - sh) / 2;
-  }
-  ctx.drawImage(img, sx, sy, sw, sh, 0, 0, w, h);
-}
-
-function rotateImageData(source: ImageData, angle: number): ImageData {
-  const normalized = ((angle % 360) + 360) % 360;
-  const swap = normalized === 90 || normalized === 270;
-  const canvas = document.createElement('canvas');
-  canvas.width = swap ? source.height : source.width;
-  canvas.height = swap ? source.width : source.height;
-  const ctx = canvas.getContext('2d')!;
-
-  const temp = document.createElement('canvas');
-  temp.width = source.width;
-  temp.height = source.height;
-  temp.getContext('2d')!.putImageData(source, 0, 0);
-
-  ctx.translate(canvas.width / 2, canvas.height / 2);
-  ctx.rotate((normalized * Math.PI) / 180);
-  ctx.drawImage(temp, -source.width / 2, -source.height / 2);
-
-  return ctx.getImageData(0, 0, canvas.width, canvas.height);
-}
-
-function cropImageData(source: ImageData, ratio: 'original' | '1:1' | '4:3' | '16:9'): ImageData {
-  if (ratio === 'original') return source;
-
-  const targetRatio = ratio === '1:1' ? 1 : ratio === '4:3' ? 4 / 3 : 16 / 9;
-  const width = source.width;
-  const height = source.height;
-  let cropWidth = width;
-  let cropHeight = height;
-
-  if (width / height > targetRatio) {
-    cropWidth = Math.round(height * targetRatio);
-  } else {
-    cropHeight = Math.round(width / targetRatio);
-  }
-
-  const cropX = Math.round((width - cropWidth) / 2);
-  const cropY = Math.round((height - cropHeight) / 2);
-
-  const canvas = document.createElement('canvas');
-  canvas.width = cropWidth;
-  canvas.height = cropHeight;
-  const ctx = canvas.getContext('2d')!;
-
-  const temp = document.createElement('canvas');
-  temp.width = width;
-  temp.height = height;
-  temp.getContext('2d')!.putImageData(source, 0, 0);
-
-  ctx.drawImage(temp, cropX, cropY, cropWidth, cropHeight, 0, 0, cropWidth, cropHeight);
-  return ctx.getImageData(0, 0, cropWidth, cropHeight);
-}
-
-function cropImageDataRect(source: ImageData, rect: CropRect): ImageData {
-  const cropX = Math.round(rect.x * source.width);
-  const cropY = Math.round(rect.y * source.height);
-  const cropWidth = Math.round(rect.w * source.width);
-  const cropHeight = Math.round(rect.h * source.height);
-
-  const canvas = document.createElement('canvas');
-  canvas.width = cropWidth;
-  canvas.height = cropHeight;
-  const ctx = canvas.getContext('2d')!;
-
-  const temp = document.createElement('canvas');
-  temp.width = source.width;
-  temp.height = source.height;
-  temp.getContext('2d')!.putImageData(source, 0, 0);
-
-  ctx.drawImage(temp, cropX, cropY, cropWidth, cropHeight, 0, 0, cropWidth, cropHeight);
-  return ctx.getImageData(0, 0, cropWidth, cropHeight);
-}
-
 export default function App() {
   const [image, setImage] = useState<HTMLImageElement | null>(null);
   const [imageData, setImageData] = useState<ImageData | null>(null);
@@ -553,7 +173,6 @@ export default function App() {
   const [frameThickness, setFrameThickness] = useState(8); // percentage of container
   const [grainSeed, setGrainSeed] = useState(42);
   const [loadingDemo, setLoadingDemo] = useState(false);
-  const [processTime, setProcessTime] = useState(0);
   const [sidebarOpen, setSidebarOpen] = useState(window.innerWidth >= 768);
   const [isAboutOpen, setIsAboutOpen] = useState(false);
   const [zoom, setZoom] = useState(1);
@@ -743,11 +362,7 @@ export default function App() {
     processTimeoutRef.current = setTimeout(() => {
       setProcessing(true);
       requestAnimationFrame(() => {
-        const t0 = performance.now();
         const result = processImage(imageData, selectedPreset, currentParams, grainSeed);
-        const elapsed = performance.now() - t0;
-        setProcessTime(Math.round(elapsed));
-
         const canvas = canvasRef.current!;
         canvas.width = result.width;
         canvas.height = result.height;
@@ -818,50 +433,6 @@ export default function App() {
     img.onload = () => { frameImgRef.current = img; };
     img.src = selectedFrame;
   }, [selectedFrame]);
-
-  const loadImage = useCallback((img: HTMLImageElement) => {
-    // Limit size for performance (increased max for local computation)
-    const maxDim = 3200;
-    let w = img.width;
-    let h = img.height;
-    if (w > maxDim || h > maxDim) {
-      const scale = maxDim / Math.max(w, h);
-      w = Math.round(w * scale);
-      h = Math.round(h * scale);
-    }
-
-    const tempCanvas = document.createElement('canvas');
-    tempCanvas.width = w;
-    tempCanvas.height = h;
-    const ctx = tempCanvas.getContext('2d')!;
-    ctx.drawImage(img, 0, 0, w, h);
-    const data = ctx.getImageData(0, 0, w, h);
-
-    setImage(img);
-    setImageData(data);
-    originalImageDataRef.current = data;
-    setHistory([]);
-    setRedoStack([]);
-    setCropMode(false);
-    setCropRect(null);
-    setSelectedPreset(filmPresets[0]);
-
-    if (originalCanvasRef.current) {
-      originalCanvasRef.current.width = w;
-      originalCanvasRef.current.height = h;
-      originalCanvasRef.current.getContext('2d')!.putImageData(data, 0, 0);
-    }
-  }, []);
-
-  const handleFile = useCallback((file: File) => {
-    const reader = new FileReader();
-    reader.onload = (e) => {
-      const img = new Image();
-      img.onload = () => loadImage(img);
-      img.src = e.target?.result as string;
-    };
-    reader.readAsDataURL(file);
-  }, [loadImage]);
 
   const addBatchEntry = useCallback((entry: BatchImage) => {
     setBatchImages((prev) => {
@@ -2724,252 +2295,3 @@ export default function App() {
   );
 }
 
-// ─── Components ──────────────────────────────────────────
-
-function SectionHeader({ title, icon }: { title: string; icon?: ReactNode }) {
-  return (
-    <h3 className="text-[10px] font-bold text-zinc-600 uppercase tracking-[0.15em] flex items-center gap-2">
-      {icon}
-      <span>{title}</span>
-    </h3>
-  );
-}
-
-function SliderControl({
-  label, value, min, max, step, defaultValue, onChange, format, icon,
-}: {
-  label: string;
-  value: number;
-  min: number;
-  max: number;
-  step: number;
-  defaultValue: number;
-  onChange: (v: number | null) => void;
-  format: (v: number) => string;
-  icon?: ReactNode;
-}) {
-  const isModified = Math.abs(value - defaultValue) > step * 0.5;
-
-  return (
-    <div className="group">
-      <div className="flex items-center justify-between mb-0.5">
-        <label className={`text-[11px] font-medium transition-colors ${isModified ? 'text-amber-500/80' : 'text-zinc-500'}`}>
-          <span className="inline-flex items-center gap-2">
-            {icon ?? <SliderLabelIcon />}
-            {label}
-          </span>
-        </label>
-        <div className="flex items-center gap-1.5">
-          <span className="text-[10px] text-zinc-600 font-mono tabular-nums">{format(value)}</span>
-          {isModified && (
-            <button
-              onClick={(e) => { e.stopPropagation(); onChange(null); }}
-              className="text-zinc-700 hover:text-amber-400 transition-colors p-0.5"
-              title="Reset"
-            >
-              <ResetIcon />
-            </button>
-          )}
-        </div>
-      </div>
-      <input
-        type="range"
-        min={min}
-        max={max}
-        step={step}
-        value={value}
-        onChange={(e) => onChange(parseFloat(e.target.value))}
-        className="w-full h-1 rounded-full appearance-none cursor-pointer"
-      />
-    </div>
-  );
-}
-
-function LevelsHistogram({
-  histogram,
-  inputBlack,
-  inputWhite,
-  gamma,
-  onInputBlackChange,
-  onInputWhiteChange,
-  onGammaChange,
-}: {
-  histogram: Uint32Array | null;
-  inputBlack: number;
-  inputWhite: number;
-  gamma: number;
-  onInputBlackChange: (value: number | null) => void;
-  onInputWhiteChange: (value: number | null) => void;
-  onGammaChange: (value: number | null) => void;
-}) {
-  const canvasRef = useRef<HTMLCanvasElement>(null);
-  const histogramRef = useRef<HTMLDivElement>(null);
-  const draggingRef = useRef<{
-    marker: 'inputBlack' | 'inputWhite' | 'gamma' | null;
-    startX: number;
-    startValue: number;
-  }>({ marker: null, startX: 0, startValue: 0 });
-
-  const clamp = (value: number, min = 0, max = 1) => Math.min(Math.max(value, min), max);
-
-  const minGamma = 0.25;
-  const maxGamma = 4;
-
-  const gammaToPosition = useCallback((gammaValue: number) => {
-    const normalizedGamma = Math.min(1, Math.max(0, Math.log(gammaValue / minGamma) / Math.log(maxGamma / minGamma)));
-    return inputBlack + normalizedGamma * (inputWhite - inputBlack);
-  }, [inputBlack, inputWhite]);
-
-  const positionToGamma = useCallback((position: number) => {
-    const range = Math.max(0.001, inputWhite - inputBlack);
-    const normalized = Math.min(1, Math.max(0, (position - inputBlack) / range));
-    return minGamma * Math.pow(maxGamma / minGamma, normalized);
-  }, [inputBlack, inputWhite]);
-
-  const clampGammaPosition = useCallback((position: number) => {
-    const minGap = 0.02;
-    return Math.min(inputWhite - minGap, Math.max(inputBlack + minGap, position));
-  }, [inputBlack, inputWhite]);
-
-  const updateValue = useCallback((marker: 'inputBlack' | 'inputWhite' | 'gamma', x: number) => {
-    const bar = histogramRef.current;
-    if (!bar) return;
-    const rect = bar.getBoundingClientRect();
-    const normalized = clamp((x - rect.left) / rect.width);
-    const gammaPos = gammaToPosition(gamma);
-    const minGap = 0.02;
-
-    if (marker === 'inputBlack') {
-      onInputBlackChange(Math.min(normalized, gammaPos - minGap));
-    } else if (marker === 'inputWhite') {
-      onInputWhiteChange(Math.max(normalized, gammaPos + minGap));
-    } else if (marker === 'gamma') {
-      const pos = clampGammaPosition(normalized);
-      onGammaChange(positionToGamma(pos));
-    }
-  }, [inputBlack, inputWhite, onInputBlackChange, onInputWhiteChange, onGammaChange, gamma, gammaToPosition, positionToGamma, clampGammaPosition]);
-
-  useEffect(() => {
-    const canvas = canvasRef.current;
-    if (!canvas || !histogram) return;
-
-    const rect = canvas.getBoundingClientRect();
-    if (rect.width === 0 || rect.height === 0) return;
-
-    const dpr = window.devicePixelRatio || 1;
-    canvas.width = rect.width * dpr;
-    canvas.height = rect.height * dpr;
-    canvas.style.width = `${rect.width}px`;
-    canvas.style.height = `${rect.height}px`;
-
-    const ctx = canvas.getContext('2d');
-    if (!ctx) return;
-    ctx.setTransform(dpr, 0, 0, dpr, 0, 0);
-
-    ctx.clearRect(0, 0, rect.width, rect.height);
-    ctx.fillStyle = '#10151f';
-    ctx.fillRect(0, 0, rect.width, rect.height);
-
-    const max = Math.max(1, Math.max(...histogram));
-    const barWidth = rect.width / histogram.length;
-
-    ctx.fillStyle = 'rgba(255,255,255,0.85)';
-    for (let x = 0; x < histogram.length; x++) {
-      const value = histogram[x] / max;
-      const h = value * rect.height;
-      ctx.fillRect(x * barWidth, rect.height - h, Math.max(1, barWidth), h);
-    }
-
-    const drawMarker = (position: number, color: string) => {
-      const x = rect.width * clamp(position);
-      ctx.fillStyle = color;
-      ctx.fillRect(x - 1, 0, 2, rect.height);
-    };
-
-    drawMarker(inputBlack, 'rgba(250,204,21,0.85)');
-    drawMarker(gammaToPosition(gamma), 'rgba(56, 189, 248, 0.85)');
-    drawMarker(inputWhite, 'rgba(250,204,21,0.85)');
-  }, [histogram, inputBlack, inputWhite, gamma, gammaToPosition]);
-
-  useEffect(() => {
-    const handlePointerMove = (event: PointerEvent) => {
-      if (!draggingRef.current.marker) return;
-      updateValue(draggingRef.current.marker, event.clientX);
-    };
-
-    const handlePointerUp = () => {
-      draggingRef.current.marker = null;
-    };
-
-    window.addEventListener('pointermove', handlePointerMove);
-    window.addEventListener('pointerup', handlePointerUp);
-    return () => {
-      window.removeEventListener('pointermove', handlePointerMove);
-      window.removeEventListener('pointerup', handlePointerUp);
-    };
-  }, [updateValue]);
-
-  const startDrag = (marker: 'inputBlack' | 'inputWhite' | 'gamma') => (event: React.PointerEvent<HTMLDivElement>) => {
-    event.preventDefault();
-    draggingRef.current = {
-      marker,
-      startX: event.clientX,
-      startValue: marker === 'inputBlack' ? inputBlack : marker === 'inputWhite' ? inputWhite : gamma,
-    };
-  };
-
-  return (
-    <div className="rounded-2xl border border-zinc-800 bg-zinc-950 overflow-hidden">
-      <div className="px-3 pt-3 pb-2">
-        <div className="relative h-24 rounded-lg overflow-hidden bg-zinc-900">
-          <canvas ref={canvasRef} className="w-full h-full" />
-        </div>
-        <div ref={histogramRef} className="relative mt-2 h-7 rounded-lg overflow-hidden bg-zinc-900">
-          <div className="absolute inset-0 bg-gradient-to-r from-black via-zinc-800 to-white opacity-90" />
-          {['inputBlack', 'gamma', 'inputWhite'].map((marker) => {
-            const position = marker === 'inputBlack'
-              ? inputBlack
-              : marker === 'inputWhite'
-                ? inputWhite
-                : gammaToPosition(gamma);
-            const color = marker === 'gamma' ? 'bg-sky-400' : 'bg-amber-400';
-            const left = `${clamp(position) * 100}%`;
-            return (
-              <div
-                key={marker}
-                onPointerDown={startDrag(marker as any)}
-                className={`${color} absolute top-0 h-full w-1.5 -translate-x-1/2 cursor-ew-resize`}
-                style={{ left }}
-              />
-            );
-          })}
-        </div>
-        <div className="mt-2 grid grid-cols-3 gap-2 text-[10px] text-zinc-500">
-          <span>Blacks: {Math.round(inputBlack * 255)}</span>
-          <span className="text-center">Mids: {gamma.toFixed(2)}</span>
-          <span className="text-right">Highlights: {Math.round(inputWhite * 255)}</span>
-        </div>
-      </div>
-    </div>
-  );
-}
-
-function OriginalOverlay({ imageData, zoom }: { imageData: ImageData; zoom: number }) {
-  const ref = useRef<HTMLCanvasElement>(null);
-
-  useEffect(() => {
-    if (ref.current) {
-      ref.current.width = imageData.width;
-      ref.current.height = imageData.height;
-      ref.current.getContext('2d')!.putImageData(imageData, 0, 0);
-    }
-  }, [imageData]);
-
-  return (
-    <canvas
-      ref={ref}
-      className="absolute inset-0 m-auto max-w-full max-h-[calc(100vh-52px)] object-contain shadow-2xl"
-      style={{ transform: `scale(${zoom})`, transformOrigin: 'center center' }}
-    />
-  );
-}
