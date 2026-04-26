@@ -53,18 +53,18 @@ import {
 export default function AppLayout() {
   const state = useFilmLabState();
   const [openSections, setOpenSections] = useState({
-    tone: true,
-    levels: true,
-    presets: true,
-    curves: true,
-    filmGrain: true,
-    effects: true,
-    opticalEffects: true,
-    overlays: true,
-    frame: true,
-    filmFrame: true,
-    cropRotate: true,
-    customPreset: true,
+    tone: false,
+    levels: false,
+    presets: false,
+    curves: false,
+    filmGrain: false,
+    effects: false,
+    opticalEffects: false,
+    overlays: false,
+    frame: false,
+    filmFrame: false,
+    cropRotate: false,
+    customPreset: false,
   });
   const toggleSection = (section: keyof typeof openSections) => {
     setOpenSections((prev) => ({ ...prev, [section]: !prev[section] }));
@@ -662,6 +662,10 @@ export default function AppLayout() {
                     setCurvePointsR(selectedPreset.curves.r.map(([x, y]) => [x, y]));
                     setCurvePointsG(selectedPreset.curves.g.map(([x, y]) => [x, y]));
                     setCurvePointsB(selectedPreset.curves.b.map(([x, y]) => [x, y]));
+                    setCurvePointsMaster(selectedPreset.curves.r.map(([x, y], index) => [
+                      x,
+                      (y + selectedPreset.curves.g[index][1] + selectedPreset.curves.b[index][1]) / 3,
+                    ] as [number, number]));
                   }}
                   className="text-[10px] uppercase tracking-[0.2em] text-zinc-500 hover:text-amber-400 transition-colors"
                 >
