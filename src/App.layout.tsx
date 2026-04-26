@@ -64,6 +64,7 @@ export default function AppLayout() {
     frame: true,
     filmFrame: true,
     cropRotate: true,
+    customPreset: true,
   });
   const toggleSection = (section: keyof typeof openSections) => {
     setOpenSections((prev) => ({ ...prev, [section]: !prev[section] }));
@@ -516,10 +517,10 @@ export default function AppLayout() {
             <button
               type="button"
               onClick={() => toggleSection('presets')}
-              className="flex items-center gap-3"
+              className="flex items-center gap-3 pl-3"
             >
               <ChevronRightIcon className={`w-4 h-4 transition-transform ${openSections.presets ? 'rotate-90' : ''}`} />
-              <div className="text-[10px] uppercase tracking-[0.2em] text-zinc-500">Presets</div>
+              <SectionHeader title="Presets" icon={<PresetIcon />} />
             </button>
             {openSections.presets && (
               <>
@@ -647,7 +648,7 @@ export default function AppLayout() {
                   defaultValue={selectedPreset.pushPull ?? 0} onChange={setPushPullAmount} format={(v) => v > 0 ? `Push +${(v * 100).toFixed(0)}%` : v < 0 ? `Pull ${Math.abs(Math.round(v * 100))}%` : 'Neutral'} icon={<ContrastIcon />} />
               </div>
               )}
-              <div className="px-3 pt-1 pb-1 flex items-center justify-between gap-3">
+              <div className="px-3 pt-3 pb-2 border-t border-zinc-800/40 flex items-center justify-between gap-3">
                 <button
                   type="button"
                   onClick={() => toggleSection('curves')}
@@ -679,7 +680,7 @@ export default function AppLayout() {
                 </div>
               )}
 
-              <div className="px-3 pt-1 pb-1 flex items-center justify-between">
+              <div className="px-3 pt-3 pb-2 border-t border-zinc-800/40 flex items-center justify-between">
                 <button
                   type="button"
                   onClick={() => toggleSection('filmGrain')}
@@ -707,7 +708,7 @@ export default function AppLayout() {
                 </div>
               )}
 
-              <div className="px-3 pt-1 pb-1">
+              <div className="px-3 pt-3 pb-2 border-t border-zinc-800/40">
                 <button
                   type="button"
                   onClick={() => toggleSection('effects')}
@@ -730,7 +731,7 @@ export default function AppLayout() {
                 </div>
               )}
 
-              <div className="px-3 pt-1 pb-1">
+              <div className="px-3 pt-3 pb-2 border-t border-zinc-800/40">
                 <button
                   type="button"
                   onClick={() => toggleSection('opticalEffects')}
@@ -753,7 +754,7 @@ export default function AppLayout() {
               </div>
               )}
 
-              <div className="px-3 pt-1 pb-1">
+              <div className="px-3 pt-3 pb-2 border-t border-zinc-800/40">
                 <button
                   type="button"
                   onClick={() => toggleSection('overlays')}
@@ -858,7 +859,7 @@ export default function AppLayout() {
               </div>
               )}
 
-              <div className="px-3 pt-1 pb-1">
+              <div className="px-3 pt-3 pb-2 border-t border-zinc-800/40">
                 <button
                   type="button"
                   onClick={() => toggleSection('frame')}
@@ -900,7 +901,7 @@ export default function AppLayout() {
               </div>
               )}
 
-              <div className="px-3 pt-1 pb-1">
+              <div className="px-3 pt-3 pb-2 border-t border-zinc-800/40">
                 <button
                   type="button"
                   onClick={() => toggleSection('filmFrame')}
@@ -940,7 +941,7 @@ export default function AppLayout() {
               </div>
               )}
 
-              <div className="px-3 pt-1 pb-1">
+              <div className="px-3 pt-3 pb-2 border-t border-zinc-800/40">
                 <button
                   type="button"
                   onClick={() => toggleSection('cropRotate')}
@@ -1029,35 +1030,39 @@ export default function AppLayout() {
                 </div>
               )}
               <div className="border-t border-zinc-800/50 px-3 py-3 space-y-3">
-                <div className="flex items-center justify-between gap-2">
+                <button
+                  type="button"
+                  onClick={() => toggleSection('customPreset')}
+                  className="flex items-center gap-3 w-full"
+                >
+                  <ChevronRightIcon className={`w-4 h-4 transition-transform ${openSections.customPreset ? 'rotate-90' : ''}`} />
                   <SectionHeader title="Custom Preset" icon={<PresetIcon />} />
                   {selectedPreset.id.startsWith('custom-') && (
-                    <button
-                      onClick={() => deleteCustomPreset(selectedPreset.id)}
-                      className="text-[10px] uppercase tracking-[0.2em] text-amber-400 hover:text-amber-200"
-                    >
-                      Delete
-                    </button>
+                    <span className="ml-auto text-[10px] uppercase tracking-[0.2em] text-amber-400">Delete</span>
                   )}
-                </div>
-                <input
-                  value={customPresetName}
-                  onChange={(e) => setCustomPresetName(e.target.value)}
-                  placeholder="Preset name"
-                  className="w-full rounded-lg border border-zinc-700 bg-zinc-900 px-3 py-2 text-sm text-zinc-100 focus:border-amber-500 outline-none"
-                />
-                <input
-                  value={customPresetDescription}
-                  onChange={(e) => setCustomPresetDescription(e.target.value)}
-                  placeholder="Description"
-                  className="w-full rounded-lg border border-zinc-700 bg-zinc-900 px-3 py-2 text-sm text-zinc-100 focus:border-amber-500 outline-none"
-                />
-                <button
-                  onClick={handleSaveCustomPreset}
-                  className="w-full py-2 rounded-lg bg-amber-500 text-black font-semibold hover:bg-amber-400 transition-colors"
-                >
-                  Save Preset
                 </button>
+                {openSections.customPreset && (
+                  <>
+                    <input
+                      value={customPresetName}
+                      onChange={(e) => setCustomPresetName(e.target.value)}
+                      placeholder="Preset name"
+                      className="w-full rounded-lg border border-zinc-700 bg-zinc-900 px-3 py-2 text-sm text-zinc-100 focus:border-amber-500 outline-none"
+                    />
+                    <input
+                      value={customPresetDescription}
+                      onChange={(e) => setCustomPresetDescription(e.target.value)}
+                      placeholder="Description"
+                      className="w-full rounded-lg border border-zinc-700 bg-zinc-900 px-3 py-2 text-sm text-zinc-100 focus:border-amber-500 outline-none"
+                    />
+                    <button
+                      onClick={handleSaveCustomPreset}
+                      className="w-full py-2 rounded-lg bg-amber-500 text-black font-semibold hover:bg-amber-400 transition-colors"
+                    >
+                      Save Preset
+                    </button>
+                  </>
+                )}
               </div>
             </div>
           </div>
