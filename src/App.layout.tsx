@@ -511,7 +511,10 @@ export default function AppLayout() {
           style={sidebarStyle}
           className={`border-t md:border-t-0 md:border-r border-zinc-800/50 bg-zinc-900/40 backdrop-blur-sm flex flex-col min-h-0 overflow-y-auto transition-all duration-200 ${sidebarOpen ? 'fixed inset-x-0 bottom-0 h-[55vh] z-40 md:relative md:static md:top-16 md:left-0 md:right-auto md:h-auto' : 'w-0 min-w-0'}`}
         >
-          <div className="md:hidden py-3 border-b border-zinc-800/40 bg-zinc-900/40 flex items-center justify-center">
+          <div
+            className="md:hidden py-3 border-b border-zinc-800/40 bg-zinc-900/40 flex items-center justify-center touch-none"
+            onPointerDown={handleMobileResizePointerDown}
+          >
             <div className="h-1.5 w-16 rounded-full bg-zinc-700" />
           </div>
 
