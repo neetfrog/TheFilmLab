@@ -1187,7 +1187,7 @@ export default function AppLayout() {
 
         {sidebarOpen && (
           <div
-            className="md:hidden fixed inset-0 bg-black/50 z-30"
+            className="md:hidden fixed inset-0 bg-transparent z-30"
             onClick={() => setSidebarOpen(false)}
           />
         )}
@@ -1195,12 +1195,15 @@ export default function AppLayout() {
         <main
           ref={mainAreaRef}
           className="flex-1 flex items-center justify-center bg-zinc-950 relative overflow-visible"
-          style={isMobile
-            ? {
-                paddingTop: '48px',
-                height: sidebarOpen ? `calc(100vh - 64px - ${bottomSheetHeight})` : 'calc(100vh - 64px)',
-              }
-            : undefined}
+          style={{
+            touchAction: 'pan-y',
+            ...(isMobile
+              ? {
+                  paddingTop: '48px',
+                  height: sidebarOpen ? `calc(100vh - 64px - ${bottomSheetHeight})` : 'calc(100vh - 64px)',
+                }
+              : {}),
+          }}
         >
           {!image ? (
             <div className="flex flex-col items-center gap-6 max-w-lg px-6">

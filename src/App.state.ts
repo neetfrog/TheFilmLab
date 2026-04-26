@@ -119,6 +119,8 @@ export function useFilmLabState() {
   const fileInputRef = useRef<HTMLInputElement>(null);
   const splitContainerRef = useRef<HTMLDivElement>(null);
   const mainAreaRef = useRef<HTMLDivElement>(null);
+  const pinchRef = useRef<{ startDistance: number; startZoom: number } | null>(null);
+  const pointerPositionsRef = useRef<Map<number, { x: number; y: number }>>(new Map());
   const processTimeoutRef = useRef<ReturnType<typeof setTimeout> | null>(null);
   const processedCanvasRef = useRef<HTMLCanvasElement | null>(null);
   const latestPreviewRequestRef = useRef(0);
@@ -940,16 +942,65 @@ export function useFilmLabState() {
     const el = mainAreaRef.current;
     if (!el) return;
 
+    const clampZoom = (value: number) => Math.min(3, Math.max(0.5, value));
+    const getDistance = (a: { x: number; y: number }, b: { x: number; y: number }) =>
+      Math.hypot(a.x - b.x, a.y - b.y);
+
     const onWheel = (e: WheelEvent) => {
       if (!image) return;
       e.preventDefault();
       const delta = e.deltaY < 0 ? 0.1 : -0.1;
-      setZoom((prev) => Math.min(3, Math.max(0.5, prev + delta)));
+      setZoom((prev) => clampZoom(prev + delta));
+    };
+
+    const onPointerDown = (e: PointerEvent) => {
+      if (e.pointerType !== 'touch') return;
+      pointerPositionsRef.current.set(e.pointerId, { x: e.clientX, y: e.clientY });
+      if (pointerPositionsRef.current.size === 2) {
+        const positions = Array.from(pointerPositionsRef.current.values());
+        pinchRef.current = {
+          startDistance: getDistance(positions[0], positions[1]),
+          startZoom: zoom,
+        };
+      }
+    };
+
+    const onPointerMove = (e: PointerEvent) => {
+      if (e.pointerType !== 'touch' || !pointerPositionsRef.current.has(e.pointerId)) return;
+      pointerPositionsRef.current.set(e.pointerId, { x: e.clientX, y: e.clientY });
+      if (pointerPositionsRef.current.size !== 2 || !pinchRef.current) return;
+
+      e.preventDefault();
+      const positions = Array.from(pointerPositionsRef.current.values());
+      const distance = getDistance(positions[0], positions[1]);
+      const nextZoom = clampZoom(pinchRef.current.startZoom * (distance / pinchRef.current.startDistance));
+      setZoom(nextZoom);
+    };
+
+    const endPinch = (e: PointerEvent) => {
+      if (e.pointerType !== 'touch') return;
+      pointerPositionsRef.current.delete(e.pointerId);
+      if (pointerPositionsRef.current.size < 2) {
+        pinchRef.current = null;
+      }
     };
 
     el.addEventListener('wheel', onWheel, { passive: false });
-    return () => el.removeEventListener('wheel', onWheel);
-  }, [image]);
+    el.addEventListener('pointerdown', onPointerDown, { passive: false });
+    el.addEventListener('pointermove', onPointerMove, { passive: false });
+    el.addEventListener('pointerup', endPinch);
+    el.addEventListener('pointercancel', endPinch);
+
+    return () => {
+      el.removeEventListener('wheel', onWheel);
+      el.removeEventListener('pointerdown', onPointerDown);
+      el.removeEventListener('pointermove', onPointerMove);
+      el.removeEventListener('pointerup', endPinch);
+      el.removeEventListener('pointercancel', endPinch);
+      pointerPositionsRef.current.clear();
+      pinchRef.current = null;
+    };
+  }, [image, zoom]);
 
   useEffect(() => {
     setZoom(1);
