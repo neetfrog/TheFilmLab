@@ -104,10 +104,14 @@ export default function CurvesEditor({
               key={channel}
               type="button"
               onClick={() => setActiveChannel(channel)}
-              className={`rounded-full px-3 py-1 text-[11px] font-medium transition ${activeChannel === channel ? 'bg-zinc-700 text-white' : 'bg-zinc-800 text-zinc-400 hover:bg-zinc-700'}`}
+              className={`rounded-full p-2 transition ${activeChannel === channel ? 'bg-zinc-700' : 'bg-zinc-800 hover:bg-zinc-700'}`}
               style={activeChannel === channel ? { boxShadow: `0 0 0 1px ${channelColors[channel]}` } : undefined}
+              aria-label={channelLabels[channel]}
             >
-              {channelLabels[channel]}
+              <span
+                className="inline-flex h-3.5 w-3.5 rounded-full border border-zinc-900 shadow-sm"
+                style={{ backgroundColor: channel === 'master' ? '#ffffff' : channelColors[channel] }}
+              />
             </button>
           ))}
         </div>
