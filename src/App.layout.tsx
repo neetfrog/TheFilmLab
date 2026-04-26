@@ -1222,12 +1222,8 @@ export default function AppLayout() {
         <main
           ref={mainAreaRef}
           className="flex-1 flex items-center justify-center bg-zinc-950 relative overflow-visible"
-          onTouchStart={handleMultiTouchStart}
-          onTouchMove={handleMultiTouchMove}
-          onTouchEnd={handleMultiTouchEnd}
-          onTouchCancel={handleMultiTouchEnd}
           style={{
-            touchAction: 'none',
+            touchAction: 'pan-y',
             ...(isMobile
               ? {
                   paddingTop: '48px',
