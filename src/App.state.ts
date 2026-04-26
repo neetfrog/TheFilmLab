@@ -1,6 +1,5 @@
 import { useState, useRef, useCallback, useEffect, useMemo, useLayoutEffect } from 'react';
 import { filmPresets } from './filmPresets';
-import { processImage } from './filmProcessor';
 import {
   PRESET_STORAGE_KEY,
   FAVORITES_STORAGE_KEY,
@@ -98,6 +97,9 @@ export function useFilmLabState() {
   const mainAreaRef = useRef<HTMLDivElement>(null);
   const processTimeoutRef = useRef<ReturnType<typeof setTimeout> | null>(null);
   const processedCanvasRef = useRef<HTMLCanvasElement | null>(null);
+  const workerRef = useRef<Worker | null>(null);
+  const workerRequestIdRef = useRef(0);
+  const workerResolversRef = useRef(new Map<number, { resolve: (value: any) => void; reject: (reason?: any) => void; }>());
   const overlayImgRef = useRef<HTMLImageElement[]>([]);
   const frameImgRef = useRef<HTMLImageElement | null>(null);
   const originalImageDataRef = useRef<ImageData | null>(null);
@@ -159,28 +161,88 @@ export function useFilmLabState() {
   const framePadding = frameColor !== 'none' ? `${frameThickness}%` : '0';
 
   useEffect(() => {
-    if (!imageData || !canvasRef.current) return;
+    const worker = new Worker(new URL('./filmWorker.ts', import.meta.url), { type: 'module' });
+    workerRef.current = worker;
+
+    worker.onmessage = (event: MessageEvent) => {
+      const { id, success, result, error } = event.data;
+      const handlers = workerResolversRef.current.get(id);
+      if (!handlers) return;
+      workerResolversRef.current.delete(id);
+
+      if (success) {
+        handlers.resolve(result);
+      } else {
+        handlers.reject(new Error(error || 'Worker error'));
+      }
+    };
+
+    worker.onerror = (event) => {
+      workerResolversRef.current.forEach(({ reject }) => reject(new Error(event.message)));
+      workerResolversRef.current.clear();
+    };
+
+    return () => {
+      workerRef.current?.terminate();
+      workerRef.current = null;
+      workerResolversRef.current.forEach(({ reject }) => reject(new Error('Worker terminated')));
+      workerResolversRef.current.clear();
+    };
+  }, []);
+
+  const sendWorkerRequest = useCallback((type: 'process', payload: unknown, transfer?: Transferable[]) => {
+    const worker = workerRef.current;
+    if (!worker) return Promise.reject(new Error('Processing worker is not initialized'));
+
+    const id = ++workerRequestIdRef.current;
+    return new Promise<any>((resolve, reject) => {
+      workerResolversRef.current.set(id, { resolve, reject });
+      worker.postMessage({ id, type, payload }, transfer ?? []);
+    });
+  }, []);
+
+  const processImageInWorker = useCallback(async (
+    source: ImageData,
+    preset: FilmPreset,
+    params: ProcessingParams,
+    grainSeed?: number,
+  ) => {
+    const bufferCopy = new Uint8ClampedArray(source.data);
+    const result = await sendWorkerRequest('process', {
+      imageData: { width: source.width, height: source.height, data: bufferCopy },
+      preset,
+      params,
+      grainSeed,
+    }, [bufferCopy.buffer]);
+
+    return new ImageData(new Uint8ClampedArray(result.data), result.width, result.height);
+  }, [sendWorkerRequest]);
+
+  useEffect(() => {
+    if (!imageData || !canvasRef.current || !workerRef.current) return;
 
     if (processTimeoutRef.current) clearTimeout(processTimeoutRef.current);
 
     const debounceDelay = 80;
     processTimeoutRef.current = setTimeout(() => {
       setProcessing(true);
-      requestAnimationFrame(() => {
-        const result = processImage(imageData, selectedPreset, currentParams, grainSeed);
-        const canvas = canvasRef.current;
-        if (!canvas) return;
-
-        setProcessedImageData(result);
-        processedCanvasRef.current = canvas;
-        setProcessing(false);
+      requestAnimationFrame(async () => {
+        try {
+          const result = await processImageInWorker(imageData, selectedPreset, currentParams, grainSeed);
+          setProcessedImageData(result);
+          processedCanvasRef.current = canvasRef.current;
+        } catch (error) {
+          console.error('Image processing worker failed', error);
+        } finally {
+          setProcessing(false);
+        }
       });
     }, debounceDelay);
 
     return () => {
       if (processTimeoutRef.current) clearTimeout(processTimeoutRef.current);
     };
-  }, [imageData, selectedPreset, currentParams, grainSeed]);
+  }, [imageData, selectedPreset, currentParams, grainSeed, processImageInWorker]);
 
   const renderPreviewCanvas = useCallback((canvas: HTMLCanvasElement, source: ImageData, angle: number) => {
     canvas.width = source.width;
@@ -580,7 +642,7 @@ export function useFilmLabState() {
         colorShiftYOverride: editState.colorShiftY ?? undefined,
         whiteBalanceOverride: editState.whiteBalance ?? undefined,
       };
-      const result = processImage(entry.data, editState.selectedPreset, params, grainSeed);
+      const result = await processImageInWorker(entry.data, editState.selectedPreset, params, grainSeed);
       const canvas = document.createElement('canvas');
       canvas.width = result.width;
       canvas.height = result.height;
@@ -593,7 +655,7 @@ export function useFilmLabState() {
       await new Promise((resolve) => setTimeout(resolve, 180));
     }
     setProcessing(false);
-  }, [batchImages, getCurrentBatchEditState, grainSeed]);
+  }, [batchImages, getCurrentBatchEditState, grainSeed, processImageInWorker]);
 
   useEffect(() => {
     saveToStorage(PRESET_STORAGE_KEY, customPresets);
