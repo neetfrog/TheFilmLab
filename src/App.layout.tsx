@@ -170,6 +170,7 @@ export default function AppLayout() {
     loadingDemo,
     isAboutOpen,
     zoom,
+    offset,
     setZoom,
     overlayCategories,
     selectedOverlays,
@@ -335,7 +336,12 @@ export default function AppLayout() {
         minHeight: 0,
         marginInline: 'auto',
       };
-  const wrapperTransformStyle = zoom !== 1 ? { transform: `scale(${zoom})`, transformOrigin: 'center center' } : undefined;
+  const wrapperTransformStyle = (zoom !== 1 || offset.x !== 0 || offset.y !== 0)
+    ? {
+        transform: `translate(${offset.x}px, ${offset.y}px) scale(${zoom})`,
+        transformOrigin: 'center center',
+      }
+    : undefined;
 
   const selectPresetCategory = (category: typeof presetCategories[number]) => {
     if (category === 'favorites') {

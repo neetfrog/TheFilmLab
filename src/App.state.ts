@@ -60,6 +60,7 @@ export function useFilmLabState() {
   const [isAboutOpen, setIsAboutOpen] = useState(false);
   const [framingToolOpen, setFramingToolOpen] = useState(false);
   const [zoom, setZoom] = useState(1);
+  const [offset, setOffset] = useState({ x: 0, y: 0 });
 
   const [overlayCategories, setOverlayCategories] = useState<Array<'lightleaks' | 'bokeh' | 'textures' | 'paper'>>(['lightleaks']);
   const [selectedOverlays, setSelectedOverlays] = useState<string[]>([]);
@@ -120,7 +121,9 @@ export function useFilmLabState() {
   const splitContainerRef = useRef<HTMLDivElement>(null);
   const mainAreaRef = useRef<HTMLDivElement>(null);
   const pinchRef = useRef<{ startDistance: number; startZoom: number } | null>(null);
+  const panRef = useRef<{ startX: number; startY: number; startOffset: { x: number; y: number } } | null>(null);
   const pointerPositionsRef = useRef<Map<number, { x: number; y: number }>>(new Map());
+  const offsetRef = useRef({ x: 0, y: 0 });
   const processTimeoutRef = useRef<ReturnType<typeof setTimeout> | null>(null);
   const processedCanvasRef = useRef<HTMLCanvasElement | null>(null);
   const latestPreviewRequestRef = useRef(0);
@@ -936,6 +939,7 @@ export function useFilmLabState() {
     setCropRect(null);
     setRotation(0);
     setZoom(1);
+    setOffset({ x: 0, y: 0 });
   }, [pushHistory]);
 
   useEffect(() => {
@@ -962,7 +966,15 @@ export function useFilmLabState() {
         } catch {}
       }
       pointerPositionsRef.current.set(e.pointerId, { x: e.clientX, y: e.clientY });
+      if (pointerPositionsRef.current.size === 1) {
+        panRef.current = {
+          startX: e.clientX,
+          startY: e.clientY,
+          startOffset: offsetRef.current,
+        };
+      }
       if (pointerPositionsRef.current.size === 2) {
+        panRef.current = null;
         const positions = Array.from(pointerPositionsRef.current.values());
         pinchRef.current = {
           startDistance: getDistance(positions[0], positions[1]),
@@ -974,13 +986,23 @@ export function useFilmLabState() {
     const onPointerMove = (e: PointerEvent) => {
       if (e.pointerType !== 'touch' || !pointerPositionsRef.current.has(e.pointerId)) return;
       pointerPositionsRef.current.set(e.pointerId, { x: e.clientX, y: e.clientY });
-      if (pointerPositionsRef.current.size !== 2 || !pinchRef.current) return;
-
-      e.preventDefault();
-      const positions = Array.from(pointerPositionsRef.current.values());
-      const distance = getDistance(positions[0], positions[1]);
-      const nextZoom = clampZoom(pinchRef.current.startZoom * (distance / pinchRef.current.startDistance));
-      setZoom(nextZoom);
+      if (pointerPositionsRef.current.size === 2 && pinchRef.current) {
+        e.preventDefault();
+        const positions = Array.from(pointerPositionsRef.current.values());
+        const distance = getDistance(positions[0], positions[1]);
+        const nextZoom = clampZoom(pinchRef.current.startZoom * (distance / pinchRef.current.startDistance));
+        setZoom(nextZoom);
+        return;
+      }
+      if (pointerPositionsRef.current.size === 1 && panRef.current) {
+        e.preventDefault();
+        const dx = e.clientX - panRef.current.startX;
+        const dy = e.clientY - panRef.current.startY;
+        setOffset({
+          x: panRef.current.startOffset.x + dx / zoom,
+          y: panRef.current.startOffset.y + dy / zoom,
+        });
+      }
     };
 
     const endPinch = (e: PointerEvent) => {
@@ -993,6 +1015,9 @@ export function useFilmLabState() {
       pointerPositionsRef.current.delete(e.pointerId);
       if (pointerPositionsRef.current.size < 2) {
         pinchRef.current = null;
+      }
+      if (pointerPositionsRef.current.size === 0) {
+        panRef.current = null;
       }
     };
 
@@ -1015,7 +1040,12 @@ export function useFilmLabState() {
 
   useEffect(() => {
     setZoom(1);
+    setOffset({ x: 0, y: 0 });
   }, [image]);
+
+  useEffect(() => {
+    offsetRef.current = offset;
+  }, [offset]);
 
   const handleDownload = useCallback(async () => {
     if (!imageData) return;
@@ -1426,6 +1456,7 @@ const curveOverridesExist = useMemo(() => {
     sidebarOpen,
     isAboutOpen,
     zoom,
+    offset,
     overlayCategories,
     selectedOverlays,
     overlayOpacityByCategory,
@@ -1532,6 +1563,7 @@ const curveOverridesExist = useMemo(() => {
     setCustomPresetDescription,
     setCropRect,
     setZoom,
+    setOffset,
     setRotation,
     setLoadingDemo,
     setIsAboutOpen,
