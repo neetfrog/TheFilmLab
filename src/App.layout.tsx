@@ -84,6 +84,7 @@ export default function AppLayout() {
     overlayOpacity,
     overlayBlend,
     selectedFrame,
+    rotation,
     canvasRef,
     originalCanvasRef,
     fileInputRef,
@@ -165,6 +166,7 @@ export default function AppLayout() {
 
   const presetCategories = ['all', 'color-negative', 'bw-negative', 'slide', 'cinema', 'custom', 'favorites'] as const;
   const activeCategory = showFavoritesOnly ? 'favorites' : filterType;
+  const rotatedFitStyle = rotation % 180 !== 0 ? { width: 'auto', height: '100%' } : { width: '100%', height: 'auto' };
 
   const selectPresetCategory = (category: typeof presetCategories[number]) => {
     if (category === 'favorites') {
@@ -911,7 +913,7 @@ export default function AppLayout() {
               onTouchMove={(e) => handleSplitMove(e.touches[0].clientX)}
               onTouchEnd={() => setDraggingSplit(false)}
             >
-              <div className="relative inline-block max-w-full max-h-full" style={{ transform: `scale(${zoom})`, transformOrigin: 'center center' }}>
+              <div className="relative inline-block max-w-full max-h-full overflow-hidden" style={{ transform: `scale(${zoom})`, transformOrigin: 'center center' }}>
                 <canvas ref={originalCanvasRef} className="max-w-full max-h-[calc(100vh-52px)] object-contain block" />
                 <div className="absolute inset-0 overflow-hidden pointer-events-none" style={{ clipPath: `inset(0 0 0 ${splitPos}%)` }}>
                   <canvas ref={canvasRef} className="max-w-full max-h-[calc(100vh-52px)] object-contain block" />
@@ -935,8 +937,18 @@ export default function AppLayout() {
                       <img
                         key={overlayUrl}
                         src={overlayUrl}
-                        className="absolute inset-0 w-full h-full"
-                        style={{ objectFit: 'cover', opacity: overlayOpacity, mixBlendMode: activeOverlayBlend }}
+                        className="absolute pointer-events-none"
+                        style={{
+                          position: 'absolute',
+                          left: '50%',
+                          top: '50%',
+                          objectFit: 'cover',
+                          opacity: overlayOpacity,
+                          mixBlendMode: activeOverlayBlend,
+                          transform: `translate(-50%, -50%) rotate(${rotation}deg)`,
+                          transformOrigin: 'center center',
+                          ...rotatedFitStyle,
+                        }}
                         alt=""
                       />
                     ))}
@@ -946,8 +958,16 @@ export default function AppLayout() {
                   <div className="absolute inset-0 overflow-hidden pointer-events-none" style={{ clipPath: `inset(0 0 0 ${splitPos}%)` }}>
                     <img
                       src={selectedFrame}
-                      className="absolute inset-0 w-full h-full"
-                      style={{ objectFit: 'cover' }}
+                      className="absolute pointer-events-none"
+                      style={{
+                        position: 'absolute',
+                        left: '50%',
+                        top: '50%',
+                        objectFit: 'cover',
+                        transform: `translate(-50%, -50%) rotate(${rotation}deg)`,
+                        transformOrigin: 'center center',
+                        ...rotatedFitStyle,
+                      }}
                       alt=""
                     />
                   </div>
@@ -965,7 +985,7 @@ export default function AppLayout() {
               onTouchCancel={() => setShowOriginal(false)}
             >
               <div className="relative flex items-center justify-center max-w-full" style={{ backgroundColor: frameBackground, padding: framePadding }}>
-                <div className="relative inline-block max-w-full" style={{ transform: `scale(${zoom})`, transformOrigin: 'center center' }}>
+                <div className="relative inline-block max-w-full overflow-hidden" style={{ transform: `scale(${zoom})`, transformOrigin: 'center center' }}>
                   <canvas
                     ref={canvasRef}
                     className={`block max-w-full max-h-[calc(100vh-52px)] shadow-2xl ${
@@ -1016,16 +1036,34 @@ export default function AppLayout() {
                     <img
                       key={overlayUrl}
                       src={overlayUrl}
-                      className="absolute inset-0 w-full h-full pointer-events-none"
-                      style={{ objectFit: 'cover', opacity: overlayOpacity, mixBlendMode: activeOverlayBlend }}
+                      className="absolute pointer-events-none"
+                      style={{
+                        position: 'absolute',
+                        left: '50%',
+                        top: '50%',
+                        objectFit: 'cover',
+                        opacity: overlayOpacity,
+                        mixBlendMode: activeOverlayBlend,
+                        transform: `translate(-50%, -50%) rotate(${rotation}deg)`,
+                        transformOrigin: 'center center',
+                        ...rotatedFitStyle,
+                      }}
                       alt=""
                     />
                   ))}
                   {!showOriginal && selectedFrame && (
                     <img
                       src={selectedFrame}
-                      className="absolute inset-0 w-full h-full pointer-events-none"
-                      style={{ objectFit: 'cover' }}
+                      className="absolute pointer-events-none"
+                      style={{
+                        position: 'absolute',
+                        left: '50%',
+                        top: '50%',
+                        objectFit: 'cover',
+                        transform: `translate(-50%, -50%) rotate(${rotation}deg)`,
+                        transformOrigin: 'center center',
+                        ...rotatedFitStyle,
+                      }}
                       alt=""
                     />
                   )}

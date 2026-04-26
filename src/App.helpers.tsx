@@ -358,18 +358,69 @@ export const CANVAS_BLEND: Record<BlendMode, GlobalCompositeOperation> = {
   normal: 'source-over',
 };
 
-export function drawImageCover(ctx: CanvasRenderingContext2D, img: HTMLImageElement, w: number, h: number) {
-  const imgAR = img.naturalWidth / img.naturalHeight;
+function getCanvasImageSourceDimensions(source: CanvasImageSource) {
+  if (source instanceof HTMLImageElement) {
+    return { width: source.naturalWidth, height: source.naturalHeight };
+  }
+  if (source instanceof HTMLCanvasElement) {
+    return { width: source.width, height: source.height };
+  }
+  if (source instanceof HTMLVideoElement) {
+    return { width: source.videoWidth, height: source.videoHeight };
+  }
+  return { width: 0, height: 0 };
+}
+
+export function drawImageCover(ctx: CanvasRenderingContext2D, img: CanvasImageSource, w: number, h: number) {
+  const { width: imgWidth, height: imgHeight } = getCanvasImageSourceDimensions(img);
+  const imgAR = imgWidth / imgHeight;
   const canvasAR = w / h;
-  let sx = 0, sy = 0, sw = img.naturalWidth, sh = img.naturalHeight;
+  let sx = 0, sy = 0, sw = imgWidth, sh = imgHeight;
   if (imgAR > canvasAR) {
-    sw = img.naturalHeight * canvasAR;
-    sx = (img.naturalWidth - sw) / 2;
+    sw = imgHeight * canvasAR;
+    sx = (imgWidth - sw) / 2;
   } else {
-    sh = img.naturalWidth / canvasAR;
-    sy = (img.naturalHeight - sh) / 2;
+    sh = imgWidth / canvasAR;
+    sy = (imgHeight - sh) / 2;
   }
   ctx.drawImage(img, sx, sy, sw, sh, 0, 0, w, h);
+}
+
+export function drawImageCoverRotated(ctx: CanvasRenderingContext2D, img: CanvasImageSource, w: number, h: number, angle: number) {
+  const normalized = ((angle % 360) + 360) % 360;
+  if (normalized === 0) {
+    drawImageCover(ctx, img, w, h);
+    return;
+  }
+
+  const swap = normalized === 90 || normalized === 270;
+  const { width: imgWidth, height: imgHeight } = getCanvasImageSourceDimensions(img);
+  const rotatedWidth = swap ? imgHeight : imgWidth;
+  const rotatedHeight = swap ? imgWidth : imgHeight;
+  const sourceAR = rotatedWidth / rotatedHeight;
+  const targetAR = w / h;
+
+  let sx = 0;
+  let sy = 0;
+  let sw = imgWidth;
+  let sh = imgHeight;
+
+  if (sourceAR > targetAR) {
+    sw = Math.round(imgHeight * targetAR);
+    sx = Math.round((imgWidth - sw) / 2);
+  } else {
+    sh = Math.round(imgWidth / targetAR);
+    sy = Math.round((imgHeight - sh) / 2);
+  }
+
+  const drawWidth = swap ? h : w;
+  const drawHeight = swap ? w : h;
+
+  ctx.save();
+  ctx.translate(w / 2, h / 2);
+  ctx.rotate((normalized * Math.PI) / 180);
+  ctx.drawImage(img, sx, sy, sw, sh, -drawWidth / 2, -drawHeight / 2, drawWidth, drawHeight);
+  ctx.restore();
 }
 
 export function rotateImageData(source: ImageData, angle: number): ImageData {

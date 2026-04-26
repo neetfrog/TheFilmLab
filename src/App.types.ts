@@ -13,6 +13,7 @@ export interface BatchImageEditState {
   overlayOpacity: number;
   overlayBlend: BlendMode;
   selectedFrame: string | null;
+  rotation: number;
   grainAmount: number | null;
   grainSize: number | null;
   grainRoughness: number | null;
@@ -83,5 +84,6 @@ export interface HistoryEntry {
   overlayOpacity: number;
   overlayBlend: BlendMode;
   selectedFrame: string | null;
+  rotation: number;
   activeBatchIndex: number | null;
 }
