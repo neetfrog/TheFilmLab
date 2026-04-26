@@ -167,7 +167,6 @@ export default function AppLayout() {
 
   const presetCategories = ['all', 'color-negative', 'bw-negative', 'slide', 'cinema', 'custom', 'favorites'] as const;
   const activeCategory = showFavoritesOnly ? 'favorites' : filterType;
-  const rotatedFitStyle = rotation % 180 !== 0 ? { width: 'auto', height: '100%' } : { width: '100%', height: 'auto' };
   const frameWrapperStyle = selectedFrame && frameAspectRatio ? { aspectRatio: frameAspectRatio, maxWidth: '100%', maxHeight: 'calc(100vh - 52px)' } : { maxWidth: '100%', maxHeight: 'calc(100vh - 52px)' };
 
   const selectPresetCategory = (category: typeof presetCategories[number]) => {
@@ -944,12 +943,13 @@ export default function AppLayout() {
                           position: 'absolute',
                           left: '50%',
                           top: '50%',
+                          width: '100%',
+                          height: '100%',
                           objectFit: 'cover',
                           opacity: overlayOpacity,
                           mixBlendMode: activeOverlayBlend,
                           transform: `translate(-50%, -50%) rotate(${rotation}deg)`,
                           transformOrigin: 'center center',
-                          ...rotatedFitStyle,
                         }}
                         alt=""
                       />
@@ -1044,12 +1044,13 @@ export default function AppLayout() {
                         position: 'absolute',
                         left: '50%',
                         top: '50%',
+                        width: '100%',
+                        height: '100%',
                         objectFit: 'cover',
                         opacity: overlayOpacity,
                         mixBlendMode: activeOverlayBlend,
                         transform: `translate(-50%, -50%) rotate(${rotation}deg)`,
                         transformOrigin: 'center center',
-                        ...rotatedFitStyle,
                       }}
                       alt=""
                     />
