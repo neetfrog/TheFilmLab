@@ -1575,11 +1575,12 @@ export default function AppLayout() {
               </div>
               <div className="mt-4 space-y-3 text-sm leading-relaxed">
                 <p>FilmLab is an in-browser analogue film emulator. Upload a photo, pick a preset, and adjust tone, grain, and effects.</p>
+                <p>All editing is done locally in your browser — no photo data is uploaded or sent to any server.</p>
                 <ul className="list-disc list-inside space-y-1 text-zinc-300">
                   <li>Upload or drag & drop an image.</li>
                   <li>Select film stock on the left.</li>
                   <li>Use sliders to tweak exposure, contrast, grain, and more.</li>
-                  <li>Use Compare and hold Original for before/after preview.</li>
+                  <li>Use Compare for before/after preview.</li>
                   <li>Export as JPG when ready.</li>
                 </ul>
                 <a
