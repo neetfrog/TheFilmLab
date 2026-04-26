@@ -946,6 +946,48 @@ export default function AppLayout() {
               <div className="px-3 pt-3 pb-2 border-t border-zinc-800/40">
                 <button
                   type="button"
+                  onClick={() => toggleSection('frame')}
+                  className="flex items-center gap-3 w-full"
+                >
+                  <ChevronRightIcon className={`w-4 h-4 transition-transform ${openSections.frame ? 'rotate-90' : ''}`} />
+                  <SectionHeader title="Basic Frame" icon={<FrameIcon />} />
+                </button>
+              </div>
+              <div className={`overflow-hidden transition-all duration-200 ease-out origin-top ${openSections.frame ? 'max-h-screen opacity-100 scale-y-100' : 'max-h-0 opacity-0 scale-y-95'}`}>
+                <div className="px-3 pb-3 space-y-1.5">
+                  <div className="flex items-center gap-2">
+                  {['none', 'white', 'black'].map((color) => (
+                    <button
+                      key={color}
+                      onClick={() => setFrameColor(color as FrameColor)}
+                      className={`px-2 py-1 rounded text-[10px] uppercase font-bold tracking-wide transition ${
+                        frameColor === color
+                          ? 'bg-amber-500 text-black'
+                          : 'bg-zinc-800 text-zinc-300 hover:bg-zinc-700'
+                      }`}
+                    >
+                      {color}
+                    </button>
+                  ))}
+                </div>
+                {frameColor !== 'none' && (
+                  <SliderControl
+                    label="Frame Thickeness"
+                    value={frameThickness}
+                    min={0}
+                    max={20}
+                    step={1}
+                    defaultValue={8}
+                    onChange={(v) => setFrameThickness(v ?? 0)}
+                    format={(v) => `${Math.round(v)}%`}
+                  />
+                )}
+              </div>
+              </div>
+
+              <div className="px-3 pt-3 pb-2 border-t border-zinc-800/40">
+                <button
+                  type="button"
                   onClick={() => toggleSection('overlays')}
                   className="flex items-center gap-3 w-full"
                 >
@@ -1055,48 +1097,6 @@ export default function AppLayout() {
               <div className="px-3 pt-3 pb-2 border-t border-zinc-800/40">
                 <button
                   type="button"
-                  onClick={() => toggleSection('frame')}
-                  className="flex items-center gap-3 w-full"
-                >
-                  <ChevronRightIcon className={`w-4 h-4 transition-transform ${openSections.frame ? 'rotate-90' : ''}`} />
-                  <SectionHeader title="Frame" icon={<FrameIcon />} />
-                </button>
-              </div>
-              <div className={`overflow-hidden transition-all duration-200 ease-out origin-top ${openSections.frame ? 'max-h-screen opacity-100 scale-y-100' : 'max-h-0 opacity-0 scale-y-95'}`}>
-                <div className="px-3 pb-3 space-y-1.5">
-                  <div className="flex items-center gap-2">
-                  {['none', 'white', 'black'].map((color) => (
-                    <button
-                      key={color}
-                      onClick={() => setFrameColor(color as FrameColor)}
-                      className={`px-2 py-1 rounded text-[10px] uppercase font-bold tracking-wide transition ${
-                        frameColor === color
-                          ? 'bg-amber-500 text-black'
-                          : 'bg-zinc-800 text-zinc-300 hover:bg-zinc-700'
-                      }`}
-                    >
-                      {color}
-                    </button>
-                  ))}
-                </div>
-                {frameColor !== 'none' && (
-                  <SliderControl
-                    label="Frame Thickeness"
-                    value={frameThickness}
-                    min={0}
-                    max={20}
-                    step={1}
-                    defaultValue={8}
-                    onChange={(v) => setFrameThickness(v ?? 0)}
-                    format={(v) => `${Math.round(v)}%`}
-                  />
-                )}
-              </div>
-              </div>
-
-              <div className="px-3 pt-3 pb-2 border-t border-zinc-800/40">
-                <button
-                  type="button"
                   onClick={() => toggleSection('filmFrame')}
                   className="flex items-center gap-3 w-full"
                 >
@@ -1157,13 +1157,13 @@ export default function AppLayout() {
                     }}
                     className={`flex-1 px-2 py-2 rounded-lg text-sm font-semibold transition-colors ${cropMode ? 'bg-amber-500 text-black' : 'bg-zinc-800 text-zinc-300 hover:bg-zinc-700'}`}
                   >
-                    {cropMode && cropRect ? 'Apply Crop' : cropMode ? 'Crop Mode Active' : 'Start Crop'}
+                    {cropMode && cropRect ? 'Apply' : cropMode ? 'Crop Mode Active' : 'Crop'}
                   </button>
                   <button
                     onClick={resetCrop}
                     className="flex-1 px-2 py-2 rounded-lg bg-zinc-800 text-zinc-300 hover:bg-zinc-700 transition-colors"
                   >
-                    Cancel Crop
+                    Cancel
                   </button>
                 </div>
                 <div className="flex flex-wrap gap-2 items-center">
