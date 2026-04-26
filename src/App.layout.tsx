@@ -1526,7 +1526,12 @@ export default function AppLayout() {
           )}
 
           {image && !splitView && (
-            <div className="absolute bottom-3 left-1/2 -translate-x-1/2 flex items-center gap-2.5 bg-zinc-900/70 backdrop-blur-xl border border-zinc-800/50 rounded-xl px-3 py-1.5 text-[11px] whitespace-nowrap">
+            <div
+              className="fixed left-1/2 -translate-x-1/2 z-50 flex items-center gap-2.5 bg-zinc-900/70 backdrop-blur-xl border border-zinc-800/50 rounded-xl px-3 py-1.5 text-[11px] whitespace-nowrap"
+              style={{
+                bottom: isMobile && sidebarOpen ? `calc(${mobileSheetHeight}vh + 0.75rem)` : '1rem',
+              }}
+            >
               {selectedPreset.id !== 'none' && (
                 <span className={`px-1.5 py-0.5 rounded border font-medium text-[9px] ${typeColors[selectedPreset.type]}`}>
                   {typeBadge[selectedPreset.type]}
