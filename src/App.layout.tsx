@@ -1291,21 +1291,10 @@ export default function AppLayout() {
               onTouchMove={(e) => handleSplitMove(e.touches[0].clientX)}
               onTouchEnd={() => setDraggingSplit(false)}
             >
-              <div className="relative inline-block w-auto max-w-full max-h-full overflow-visible" style={{ ...frameWrapperStyle, ...wrapperTransformStyle, backgroundColor: frameBackground, padding: framePadding }}>
-                <canvas
-                  ref={originalCanvasRef}
-                  className="w-full h-full block"
-                  style={{
-                    objectFit: isMobile ? 'contain' : selectedFrame ? 'cover' : 'contain',
-                    maxWidth: '100%',
-                    maxHeight: '100%',
-                    width: '100%',
-                    height: '100%',
-                  }}
-                />
-                <div className="absolute inset-0 overflow-hidden pointer-events-none" style={{ clipPath: `inset(0 0 0 ${splitPos}%)` }}>
+              <div className="relative inline-block w-auto max-w-full max-h-full overflow-visible" style={{ ...frameWrapperStyle, ...wrapperTransformStyle, backgroundColor: frameBackground }}>
+                <div className="relative inline-block w-auto max-w-full max-h-full overflow-visible" style={{ padding: framePadding }}>
                   <canvas
-                    ref={canvasRef}
+                    ref={originalCanvasRef}
                     className="w-full h-full block"
                     style={{
                       objectFit: isMobile ? 'contain' : selectedFrame ? 'cover' : 'contain',
@@ -1315,6 +1304,19 @@ export default function AppLayout() {
                       height: '100%',
                     }}
                   />
+                  <div className="absolute inset-0 overflow-hidden pointer-events-none" style={{ clipPath: `inset(0 0 0 ${splitPos}%)` }}>
+                    <canvas
+                      ref={canvasRef}
+                      className="w-full h-full block"
+                      style={{
+                        objectFit: isMobile ? 'contain' : selectedFrame ? 'cover' : 'contain',
+                        maxWidth: '100%',
+                        maxHeight: '100%',
+                        width: '100%',
+                        height: '100%',
+                      }}
+                    />
+                  </div>
                 </div>
                 <div
                   className="absolute top-0 bottom-0 cursor-col-resize z-10"
@@ -1339,23 +1341,16 @@ export default function AppLayout() {
                 <div className="absolute top-2 left-2 bg-black/60 text-white/80 text-[10px] font-medium px-2 py-0.5 rounded-md backdrop-blur-sm">Original</div>
                 <div className="absolute top-2 right-2 bg-black/60 text-white/80 text-[10px] font-medium px-2 py-0.5 rounded-md backdrop-blur-sm">{selectedPreset.name}</div>
                 {selectedFrame && (
-                  <div className="absolute inset-0 overflow-hidden pointer-events-none" style={{ clipPath: `inset(0 0 0 ${splitPos}%)` }}>
-                    <img
-                      src={selectedFrame}
-                      className="absolute pointer-events-none"
-                      style={{
-                        position: 'absolute',
-                        left: '50%',
-                        top: '50%',
-                        width: '100%',
-                        height: '100%',
-                        objectFit: 'contain',
-                        transform: 'translate(-50%, -50%)',
-                        transformOrigin: 'center center',
-                      }}
-                      alt=""
-                    />
-                  </div>
+                  <img
+                    src={selectedFrame}
+                    className="absolute inset-0 pointer-events-none"
+                    style={{
+                      width: '100%',
+                      height: '100%',
+                      objectFit: 'contain',
+                    }}
+                    alt=""
+                  />
                 )}
               </div>
             </div>
@@ -1365,80 +1360,77 @@ export default function AppLayout() {
               style={{ touchAction: 'none', overscrollBehavior: 'none' }}
             >
               <div className="relative flex items-center justify-center max-w-full" style={{ width: '100%', touchAction: 'none', overscrollBehavior: 'none' }}>
-                <div ref={imageWrapperRef} className="relative inline-block w-auto max-w-full overflow-visible" style={{ ...frameWrapperStyle, ...wrapperTransformStyle, backgroundColor: frameBackground, padding: framePadding, touchAction: 'none' }}>
-                  <canvas
-                    ref={canvasRef}
-                    className="block shadow-2xl opacity-100"
-                    style={{
-                      imageRendering: 'auto',
-                      objectFit: isMobile ? 'contain' : selectedFrame ? 'cover' : 'contain',
-                      maxWidth: '100%',
-                      maxHeight: '100%',
-                      width: 'auto',
-                      height: 'auto',
-                      display: 'block',
-                      touchAction: 'none',
-                    }}
-                  />
-                  {cropMode && cropRect && (
-                    <div className="absolute inset-0 pointer-events-auto" data-ignore-pan>
-                      <div className="absolute left-0 top-0 right-0 pointer-events-none" style={{ height: `${cropRect.y * 100}%`, backgroundColor: 'rgba(0,0,0,0.45)' }} />
-                      <div className="absolute left-0 right-0 pointer-events-none" style={{ top: `${(cropRect.y + cropRect.h) * 100}%`, height: `${(1 - cropRect.y - cropRect.h) * 100}%`, backgroundColor: 'rgba(0,0,0,0.45)' }} />
-                      <div className="absolute left-0 pointer-events-none" style={{ top: `${cropRect.y * 100}%`, width: `${cropRect.x * 100}%`, height: `${cropRect.h * 100}%`, backgroundColor: 'rgba(0,0,0,0.45)' }} />
-                      <div className="absolute right-0 pointer-events-none" style={{ top: `${cropRect.y * 100}%`, width: `${(1 - cropRect.x - cropRect.w) * 100}%`, height: `${cropRect.h * 100}%`, backgroundColor: 'rgba(0,0,0,0.45)' }} />
-                      <div
-                        className="absolute border border-amber-400 bg-transparent cursor-move"
-                        style={{ left: `${cropRect.x * 100}%`, top: `${cropRect.y * 100}%`, width: `${cropRect.w * 100}%`, height: `${cropRect.h * 100}%` }}
-                        onPointerDown={onCropPointerDown('move')}
-                        onPointerMove={onCropPointerMove}
-                        onPointerUp={onCropPointerUp}
-                        onPointerLeave={onCropPointerUp}
-                      >
-                        <div className={`absolute inset-0 ${draggingCrop ? 'ring-2 ring-amber-400/70' : ''}`} />
-                        <div className="absolute inset-0 pointer-events-none">
-                          <div className="absolute left-1/3 top-0 h-full w-px bg-white/70" />
-                          <div className="absolute left-2/3 top-0 h-full w-px bg-white/70" />
-                          <div className="absolute top-1/3 left-0 w-full h-px bg-white/70" />
-                          <div className="absolute top-2/3 left-0 w-full h-px bg-white/70" />
+                <div ref={imageWrapperRef} className="relative inline-block w-auto max-w-full overflow-visible" style={{ ...frameWrapperStyle, ...wrapperTransformStyle, backgroundColor: frameBackground, touchAction: 'none' }}>
+                  <div className="relative inline-block w-auto max-w-full overflow-visible" style={{ padding: framePadding }}>
+                    <canvas
+                      ref={canvasRef}
+                      className="block shadow-2xl opacity-100"
+                      style={{
+                        imageRendering: 'auto',
+                        objectFit: isMobile ? 'contain' : selectedFrame ? 'cover' : 'contain',
+                        maxWidth: '100%',
+                        maxHeight: '100%',
+                        width: 'auto',
+                        height: 'auto',
+                        display: 'block',
+                        touchAction: 'none',
+                      }}
+                    />
+                    {cropMode && cropRect && (
+                      <div className="absolute inset-0 pointer-events-auto" data-ignore-pan>
+                        <div className="absolute left-0 top-0 right-0 pointer-events-none" style={{ height: `${cropRect.y * 100}%`, backgroundColor: 'rgba(0,0,0,0.45)' }} />
+                        <div className="absolute left-0 right-0 pointer-events-none" style={{ top: `${(cropRect.y + cropRect.h) * 100}%`, height: `${(1 - cropRect.y - cropRect.h) * 100}%`, backgroundColor: 'rgba(0,0,0,0.45)' }} />
+                        <div className="absolute left-0 pointer-events-none" style={{ top: `${cropRect.y * 100}%`, width: `${cropRect.x * 100}%`, height: `${cropRect.h * 100}%`, backgroundColor: 'rgba(0,0,0,0.45)' }} />
+                        <div className="absolute right-0 pointer-events-none" style={{ top: `${cropRect.y * 100}%`, width: `${(1 - cropRect.x - cropRect.w) * 100}%`, height: `${cropRect.h * 100}%`, backgroundColor: 'rgba(0,0,0,0.45)' }} />
+                        <div
+                          className="absolute border border-amber-400 bg-transparent cursor-move"
+                          style={{ left: `${cropRect.x * 100}%`, top: `${cropRect.y * 100}%`, width: `${cropRect.w * 100}%`, height: `${cropRect.h * 100}%` }}
+                          onPointerDown={onCropPointerDown('move')}
+                          onPointerMove={onCropPointerMove}
+                          onPointerUp={onCropPointerUp}
+                          onPointerLeave={onCropPointerUp}
+                        >
+                          <div className={`absolute inset-0 ${draggingCrop ? 'ring-2 ring-amber-400/70' : ''}`} />
+                          <div className="absolute inset-0 pointer-events-none">
+                            <div className="absolute left-1/3 top-0 h-full w-px bg-white/70" />
+                            <div className="absolute left-2/3 top-0 h-full w-px bg-white/70" />
+                            <div className="absolute top-1/3 left-0 w-full h-px bg-white/70" />
+                            <div className="absolute top-2/3 left-0 w-full h-px bg-white/70" />
+                          </div>
+                          {['nw', 'ne', 'sw', 'se'].map((handle) => {
+                            const positions: Record<string, string> = {
+                              nw: 'top-0 left-0',
+                              ne: 'top-0 left-full',
+                              sw: 'top-full left-0',
+                              se: 'top-full left-full',
+                            };
+                            const cursors: Record<string, string> = {
+                              nw: 'cursor-nwse-resize',
+                              ne: 'cursor-nesw-resize',
+                              sw: 'cursor-nesw-resize',
+                              se: 'cursor-nwse-resize',
+                            };
+                            return (
+                              <div
+                                key={handle}
+                                data-ignore-pan
+                                className={`${positions[handle]} absolute w-4 h-4 -translate-x-1/2 -translate-y-1/2 rounded-full bg-amber-400 border border-white ${cursors[handle]}`}
+                                onPointerDown={onCropPointerDown(handle as any)}
+                              />
+                            );
+                          })}
                         </div>
-                        {['nw', 'ne', 'sw', 'se'].map((handle) => {
-                          const positions: Record<string, string> = {
-                            nw: 'top-0 left-0',
-                            ne: 'top-0 left-full',
-                            sw: 'top-full left-0',
-                            se: 'top-full left-full',
-                          };
-                          const cursors: Record<string, string> = {
-                            nw: 'cursor-nwse-resize',
-                            ne: 'cursor-nesw-resize',
-                            sw: 'cursor-nesw-resize',
-                            se: 'cursor-nwse-resize',
-                          };
-                          return (
-                            <div
-                              key={handle}
-                              data-ignore-pan
-                              className={`${positions[handle]} absolute w-4 h-4 -translate-x-1/2 -translate-y-1/2 rounded-full bg-amber-400 border border-white ${cursors[handle]}`}
-                              onPointerDown={onCropPointerDown(handle as any)}
-                            />
-                          );
-                        })}
                       </div>
-                    </div>
-                  )}
+                    )}
+                  </div>
                   {!showOriginal && selectedFrame && (
                     <img
                       src={selectedFrame}
-                      className="absolute pointer-events-none"
+                      className="absolute inset-0 pointer-events-none"
                       style={{
-                        position: 'absolute',
-                        left: '50%',
-                        top: '50%',
                         width: '100%',
                         height: '100%',
                         objectFit: 'contain',
-                        transform: 'translate(-50%, -50%)',
-                        transformOrigin: 'center center',
                       }}
                       alt=""
                     />
