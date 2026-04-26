@@ -1477,6 +1477,7 @@ const curveOverridesExist = useMemo(() => {
     setGrainSeed,
     setImage,
     setImageData,
+    setProcessedImageData,
     setActiveBatchIndex,
     setProcessing,
     setSelectedPreset,

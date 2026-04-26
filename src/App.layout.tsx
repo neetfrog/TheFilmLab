@@ -110,6 +110,9 @@ export default function AppLayout() {
     splitContainerRef,
     mainAreaRef,
     handleBatchFiles,
+    setImage,
+    setImageData,
+    setProcessedImageData,
     handleDrop,
     selectBatchImage,
     handleDemo,
@@ -309,7 +312,10 @@ export default function AppLayout() {
             </div>
           </div>
 
-          <div className="flex items-center gap-2">
+          <div
+            className="flex items-center gap-2 overflow-x-auto max-w-full"
+            style={{ WebkitOverflowScrolling: 'touch' }}
+          >
             {image && (
               <>
                 <button
@@ -414,15 +420,6 @@ export default function AppLayout() {
             </button>
             {image && (
               <button
-                onClick={() => state.setFramingToolOpen(true)}
-                className="px-3 py-1.5 rounded-lg text-xs bg-zinc-800/90 hover:bg-zinc-700 text-zinc-100 font-semibold flex items-center gap-1.5 transition-all border border-zinc-700 flex-shrink-0 whitespace-nowrap"
-              >
-                <FrameIcon />
-                <span className="hidden md:inline ml-1">Framing Tool</span>
-              </button>
-            )}
-            {image && (
-              <button
                 onClick={handleDownload}
                 className="px-3 py-1.5 rounded-lg text-xs bg-amber-500 hover:bg-amber-400 text-black font-semibold flex items-center gap-1.5 transition-all shadow-lg shadow-amber-500/20 flex-shrink-0 whitespace-nowrap"
               >
@@ -449,7 +446,7 @@ export default function AppLayout() {
           <div className="sticky top-0 z-10 px-3 pt-3 pb-2 border-b border-zinc-800/40 bg-zinc-900/40 backdrop-blur-sm">
             <div className="mt-3 px-1 space-y-2">
               <div className="flex flex-wrap items-center justify-between gap-2 text-[10px] uppercase tracking-[0.2em] text-zinc-500">
-                <span>Batch ({batchImages.length})</span>
+                <span>Images ({batchImages.length})</span>
                 <div className="flex flex-wrap gap-2">
                   <button
                     onClick={() => fileInputRef.current?.click()}
@@ -462,7 +459,7 @@ export default function AppLayout() {
                       onClick={handleDownloadBatch}
                       className="px-2 py-1 rounded-md bg-amber-500 text-black hover:bg-amber-400 transition-colors"
                     >
-                      Export Batch
+                      Export Images
                     </button>
                   )}
                 </div>
@@ -470,11 +467,14 @@ export default function AppLayout() {
               {batchImages.length > 1 && (
                 <>
                   <div className="flex items-center justify-between gap-2 text-[10px] uppercase tracking-[0.2em] text-zinc-500">
-                    <span>Current Batch</span>
+                    <span>Current Images</span>
                     <button
                       onClick={() => {
                         setBatchImages([]);
                         setActiveBatchIndex(null);
+                        setImage(null);
+                        setImageData(null);
+                        setProcessedImageData(null);
                       }}
                       className="px-2 py-1 rounded-md bg-zinc-800 text-zinc-300 hover:bg-zinc-700 transition-colors"
                     >
