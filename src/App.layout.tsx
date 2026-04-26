@@ -421,6 +421,16 @@ export default function AppLayout() {
             className="flex items-center gap-2 overflow-x-auto max-w-full"
             style={{ WebkitOverflowScrolling: 'touch' }}
           >
+            <button
+              onClick={() => setIsAboutOpen(true)}
+              className="p-2 rounded-lg transition-all border flex-shrink-0 bg-zinc-800/80 text-zinc-500 hover:text-zinc-300 border-zinc-700/50"
+              title="About the app"
+              aria-label="About the app"
+            >
+              <svg className="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}>
+                <path strokeLinecap="round" strokeLinejoin="round" d="M13 16h-1v-4h-1m1-4h.01M12 19c3.314 0 6-2.686 6-6s-2.686-6-6-6-6 2.686-6 6 2.686 6 6 6z" />
+              </svg>
+            </button>
             {image && (
               <>
                 <button
@@ -538,16 +548,6 @@ export default function AppLayout() {
             >
               <FrameIcon />
               <span className="hidden md:inline ml-1">Framing Tool</span>
-            </button>
-            <button
-              onClick={() => setIsAboutOpen(true)}
-              className="p-2 rounded-lg transition-all border flex-shrink-0 bg-zinc-800/80 text-zinc-500 hover:text-zinc-300 border-zinc-700/50"
-              title="About the app"
-              aria-label="About the app"
-            >
-              <svg className="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}>
-                <path strokeLinecap="round" strokeLinejoin="round" d="M13 16h-1v-4h-1m1-4h.01M12 19c3.314 0 6-2.686 6-6s-2.686-6-6-6-6 2.686-6 6 2.686 6 6 6z" />
-              </svg>
             </button>
             {image && (
               <button
