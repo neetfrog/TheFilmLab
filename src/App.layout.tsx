@@ -161,6 +161,13 @@ export default function AppLayout() {
     setLevelsInputBlack,
     setLevelsInputWhite,
     setLevelsGamma,
+    setLevelsOutputBlack,
+    setLevelsOutputWhite,
+    levelsInputBlack,
+    levelsInputWhite,
+    levelsGamma,
+    levelsOutputBlack,
+    levelsOutputWhite,
     curveChannel,
     setCurveChannel,
     curvePointsR,
@@ -441,14 +448,37 @@ export default function AppLayout() {
 
           <div className="sticky top-0 z-10 px-3 pt-3 pb-2 border-b border-zinc-800/40 bg-zinc-900/40 backdrop-blur-sm">
             <div className="pb-4 border-b border-zinc-800/30">
-              <button
-                type="button"
-                onClick={() => toggleSection('levels')}
-                className="flex items-center gap-3"
-              >
-                <ChevronRightIcon className={`w-4 h-4 transition-transform ${openSections.levels ? 'rotate-90' : ''}`} />
-                <SectionHeader title="Levels" icon={<LevelsIcon />} />
-              </button>
+              <div className="flex items-center justify-between gap-3">
+                <button
+                  type="button"
+                  onClick={() => toggleSection('levels')}
+                  className="flex items-center gap-3"
+                >
+                  <ChevronRightIcon className={`w-4 h-4 transition-transform ${openSections.levels ? 'rotate-90' : ''}`} />
+                  <SectionHeader title="Levels" icon={<LevelsIcon />} />
+                </button>
+                <button
+                  type="button"
+                  aria-label="Reset Levels"
+                  onClick={() => {
+                    setLevelsInputBlack(null);
+                    setLevelsInputWhite(null);
+                    setLevelsGamma(null);
+                    setLevelsOutputBlack(null);
+                    setLevelsOutputWhite(null);
+                  }}
+                  disabled={
+                    levelsInputBlack === null &&
+                    levelsInputWhite === null &&
+                    levelsGamma === null &&
+                    levelsOutputBlack === null &&
+                    levelsOutputWhite === null
+                  }
+                  className="p-1 rounded-full text-zinc-500 hover:text-zinc-300 transition-colors disabled:opacity-40 disabled:cursor-not-allowed"
+                >
+                  <ResetIcon />
+                </button>
+              </div>
               <div className={`overflow-hidden transition-all duration-200 ease-out origin-top ${openSections.levels ? 'max-h-screen opacity-100 scale-y-100' : 'max-h-0 opacity-0 scale-y-95'}`}>
                 <div className="mt-2">
                   <LevelsHistogram
@@ -1031,16 +1061,6 @@ export default function AppLayout() {
               </div>
               </div>
 
-              {hasOverrides && (
-                <div className="px-3 pb-3">
-                  <button
-                    onClick={resetOverrides}
-                    className="w-full py-1.5 rounded-lg text-[11px] text-zinc-500 hover:text-zinc-200 bg-zinc-800/40 hover:bg-zinc-800/80 border border-zinc-800/60 transition-all flex items-center justify-center gap-1.5"
-                  >
-                    <ResetIcon /> Reset All to Preset Defaults
-                  </button>
-                </div>
-              )}
               <div className="border-t border-zinc-800/50 px-3 py-3 space-y-3">
                 <button
                   type="button"
