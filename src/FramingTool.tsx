@@ -12,10 +12,9 @@ interface ImageData {
 interface FramingToolProps {
   isOpen: boolean;
   onClose: () => void;
-  initialImage?: HTMLImageElement; // Optional: pass image from main app
 }
 
-export default function FramingTool({ isOpen, onClose, initialImage }: FramingToolProps) {
+export default function FramingTool({ isOpen, onClose }: FramingToolProps) {
   const [images, setImages] = useState<ImageData[]>([]);
   const [selectedIndex, setSelectedIndex] = useState<number>(0);
   const [selectedPreset, setSelectedPreset] = useState<FramePreset>(framePresets[0]);
@@ -86,8 +85,10 @@ export default function FramingTool({ isOpen, onClose, initialImage }: FramingTo
       const maxWidth = canvasWidth * paddingFactor;
       const maxHeight = canvasHeight * paddingFactor;
       const { x, y, width: drawWidth, height: drawHeight } = getCenteredDrawRect(img.width, img.height, maxWidth, maxHeight);
+      const offsetX = Math.round((canvasWidth - maxWidth) / 2);
+      const offsetY = Math.round((canvasHeight - maxHeight) / 2);
 
-      ctx.drawImage(img, x, y, drawWidth, drawHeight);
+      ctx.drawImage(img, x + offsetX, y + offsetY, drawWidth, drawHeight);
     };
     img.src = selectedImage.url;
   }, [selectedImage, selectedPreset, frameColor, padding]);
@@ -97,7 +98,7 @@ export default function FramingTool({ isOpen, onClose, initialImage }: FramingTo
     updatePreview();
   }, [updatePreview]);
 
-  const handleDownload = useCallback(async (imageData?: ImageData, index?: number) => {
+  const handleDownload = useCallback(async (imageData?: ImageData) => {
     const img = imageData || selectedImage;
     if (!img) return;
 
@@ -123,8 +124,10 @@ export default function FramingTool({ isOpen, onClose, initialImage }: FramingTo
         const maxWidth = canvas.width * paddingFactor;
         const maxHeight = canvas.height * paddingFactor;
         const { x, y, width: drawWidth, height: drawHeight } = getCenteredDrawRect(image.width, image.height, maxWidth, maxHeight);
+        const offsetX = Math.round((canvas.width - maxWidth) / 2);
+        const offsetY = Math.round((canvas.height - maxHeight) / 2);
 
-        ctx.drawImage(image, x, y, drawWidth, drawHeight);
+        ctx.drawImage(image, x + offsetX, y + offsetY, drawWidth, drawHeight);
         resolve();
       };
       image.src = img.url;
@@ -144,7 +147,7 @@ export default function FramingTool({ isOpen, onClose, initialImage }: FramingTo
   const handleDownloadAll = useCallback(async () => {
     setProcessing(true);
     for (let i = 0; i < images.length; i++) {
-      await handleDownload(images[i], i);
+      await handleDownload(images[i]);
       // Small delay between downloads
       await new Promise((resolve) => setTimeout(resolve, 300));
     }
@@ -261,7 +264,7 @@ export default function FramingTool({ isOpen, onClose, initialImage }: FramingTo
                             aria-label={color.name}
                           />
                         ))}
-                        <label className="flex items-center justify-center h-10 w-10 rounded-full border border-zinc-700/80 bg-zinc-900 text-zinc-300 cursor-pointer hover:border-amber-500">
+                        <label className="relative flex items-center justify-center h-10 w-10 rounded-full border border-zinc-700/80 bg-zinc-900 text-zinc-300 cursor-pointer hover:border-amber-500">
                           <input
                             type="color"
                             value={frameColor}

@@ -331,6 +331,13 @@ export default function AppLayout() {
               </>
             )}
             <button
+              onClick={() => state.setFramingToolOpen(true)}
+              className="px-3 py-1.5 rounded-lg text-xs bg-zinc-800/90 hover:bg-zinc-700 text-zinc-100 font-semibold flex items-center gap-1.5 transition-all border border-zinc-700 flex-shrink-0 whitespace-nowrap"
+            >
+              <FrameIcon />
+              <span className="hidden md:inline ml-1">Framing Tool</span>
+            </button>
+            <button
               onClick={() => setIsAboutOpen(true)}
               className="p-2 rounded-lg transition-all border flex-shrink-0 bg-zinc-800/80 text-zinc-500 hover:text-zinc-300 border-zinc-700/50"
               title="About the app"
@@ -340,6 +347,15 @@ export default function AppLayout() {
                 <path strokeLinecap="round" strokeLinejoin="round" d="M13 16h-1v-4h-1m1-4h.01M12 19c3.314 0 6-2.686 6-6s-2.686-6-6-6-6 2.686-6 6 2.686 6 6 6z" />
               </svg>
             </button>
+            {image && (
+              <button
+                onClick={() => state.setFramingToolOpen(true)}
+                className="px-3 py-1.5 rounded-lg text-xs bg-zinc-800/90 hover:bg-zinc-700 text-zinc-100 font-semibold flex items-center gap-1.5 transition-all border border-zinc-700 flex-shrink-0 whitespace-nowrap"
+              >
+                <FrameIcon />
+                <span className="hidden md:inline ml-1">Framing Tool</span>
+              </button>
+            )}
             {image && (
               <button
                 onClick={handleDownload}
