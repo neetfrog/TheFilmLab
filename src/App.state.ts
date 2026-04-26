@@ -388,6 +388,7 @@ export function useFilmLabState() {
     const img = new Image();
     img.src = entry.url;
     setImage(img);
+    setProcessedImageData(null);
     setImageData(entry.data);
     originalImageDataRef.current = entry.data;
     setSelectedPreset(entry.editState.selectedPreset);
@@ -548,6 +549,7 @@ export function useFilmLabState() {
     const img = new Image();
     img.src = entry.url;
     setImage(img);
+    setProcessedImageData(null);
     setImageData(entry.data);
     originalImageDataRef.current = entry.data;
     setHistory([]);

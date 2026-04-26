@@ -18,6 +18,7 @@ export default function LevelsHistogram({
   onGammaChange: (value: number | null) => void;
 }) {
   const canvasRef = useRef<HTMLCanvasElement>(null);
+  const canvasWrapperRef = useRef<HTMLDivElement>(null);
   const histogramRef = useRef<HTMLDivElement>(null);
   const draggingRef = useRef<{
     marker: 'inputBlack' | 'inputWhite' | 'gamma' | null;
@@ -63,11 +64,12 @@ export default function LevelsHistogram({
     }
   }, [gamma, gammaToPosition, onInputBlackChange, onInputWhiteChange, onGammaChange, positionToGamma, clamp, clampGammaPosition]);
 
-  useEffect(() => {
+  const drawHistogram = useCallback(() => {
     const canvas = canvasRef.current;
-    if (!canvas || !histogram) return;
+    const wrapper = canvasWrapperRef.current;
+    if (!canvas || !wrapper || !histogram) return;
 
-    const rect = canvas.getBoundingClientRect();
+    const rect = wrapper.getBoundingClientRect();
     if (rect.width === 0 || rect.height === 0) return;
 
     const dpr = window.devicePixelRatio || 1;
@@ -103,7 +105,20 @@ export default function LevelsHistogram({
     drawMarker(inputBlack, 'rgba(250,204,21,0.85)');
     drawMarker(gammaToPosition(gamma), 'rgba(56, 189, 248, 0.85)');
     drawMarker(inputWhite, 'rgba(250,204,21,0.85)');
-  }, [histogram, inputBlack, inputWhite, gamma, gammaToPosition]);
+  }, [clamp, gammaToPosition, histogram, inputBlack, inputWhite, gamma]);
+
+  useEffect(() => {
+    drawHistogram();
+  }, [drawHistogram]);
+
+  useEffect(() => {
+    const wrapper = canvasWrapperRef.current;
+    if (!wrapper) return;
+
+    const observer = new ResizeObserver(() => drawHistogram());
+    observer.observe(wrapper);
+    return () => observer.disconnect();
+  }, [drawHistogram]);
 
   useEffect(() => {
     const handlePointerMove = (event: PointerEvent) => {
@@ -135,7 +150,7 @@ export default function LevelsHistogram({
   return (
     <div className="rounded-2xl border border-zinc-800 bg-zinc-950 overflow-hidden">
       <div className="px-3 pt-3 pb-2">
-        <div className="relative h-24 rounded-lg overflow-hidden bg-zinc-900">
+        <div ref={canvasWrapperRef} className="relative h-24 rounded-lg overflow-hidden bg-zinc-900">
           <canvas ref={canvasRef} className="w-full h-full" />
         </div>
         <div ref={histogramRef} className="relative mt-2 h-7 rounded-lg overflow-hidden bg-zinc-900">
@@ -146,15 +161,19 @@ export default function LevelsHistogram({
               : marker === 'inputWhite'
                 ? inputWhite
                 : gammaToPosition(gamma);
-            const color = marker === 'gamma' ? 'bg-sky-400' : 'bg-amber-400';
+            const lineColor = marker === 'gamma' ? 'bg-sky-400' : 'bg-amber-400';
+            const handleColor = marker === 'gamma' ? 'bg-sky-400' : 'bg-amber-400';
             const left = `${clamp(position) * 100}%`;
             return (
               <div
                 key={marker}
                 onPointerDown={startDrag(marker as any)}
-                className={`${color} absolute top-0 h-full w-1.5 -translate-x-1/2 cursor-ew-resize`}
+                className="absolute top-0 h-full w-8 -translate-x-1/2 cursor-ew-resize"
                 style={{ left }}
-              />
+              >
+                <div className={`${lineColor} absolute left-1/2 top-0 h-full w-1.5 -translate-x-1/2`} />
+                <div className={`absolute left-1/2 top-1/2 -translate-x-1/2 -translate-y-1/2 h-4 w-4 rounded-full border-2 border-zinc-950 ${handleColor} shadow-[0_0_0_2px_rgba(15,23,42,0.85)]`} />
+              </div>
             );
           })}
         </div>
