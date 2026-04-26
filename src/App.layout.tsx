@@ -71,6 +71,7 @@ export default function AppLayout() {
   const [isMobile, setIsMobile] = useState(false);
   const [mobileSheetHeight, setMobileSheetHeight] = useState(55);
   const [isResizing, setIsResizing] = useState(false);
+  const [isTouchPinching, setIsTouchPinching] = useState(false);
   const startXRef = useRef(0);
   const startWidthRef = useRef(310);
   const startYRef = useRef(0);
@@ -272,6 +273,29 @@ export default function AppLayout() {
     setBatchImages,
   } = state;
 
+  const handleMultiTouchStart = (e: React.TouchEvent) => {
+    if (e.touches.length > 1) {
+      setShowOriginal(false);
+      setIsTouchPinching(true);
+    } else if (e.touches.length === 1 && !isTouchPinching) {
+      setShowOriginal(true);
+    }
+  };
+
+  const handleMultiTouchMove = (e: React.TouchEvent) => {
+    if (e.touches.length > 1) {
+      setShowOriginal(false);
+      setIsTouchPinching(true);
+    } else if (isTouchPinching && e.touches.length === 1) {
+      setIsTouchPinching(false);
+    }
+  };
+
+  const handleMultiTouchEnd = () => {
+    setShowOriginal(false);
+    setIsTouchPinching(false);
+  };
+
   const presetCountLabel = useMemo(() => `${currentPresetIndex + 1}/${displayedPresets.length}`, [currentPresetIndex, displayedPresets.length]);
 
   const presetCategories = ['all', 'color-negative', 'bw-negative', 'slide', 'cinema', 'custom', 'favorites'] as const;
@@ -413,10 +437,17 @@ export default function AppLayout() {
                   onMouseDown={() => setShowOriginal(true)}
                   onMouseUp={() => setShowOriginal(false)}
                   onMouseLeave={() => setShowOriginal(false)}
-                  onTouchStart={(e) => e.touches.length === 1 && setShowOriginal(true)}
-                  onTouchMove={(e) => { if (e.touches.length > 1) setShowOriginal(false); }}
-                  onTouchEnd={() => setShowOriginal(false)}
-                  onTouchCancel={() => setShowOriginal(false)}
+                  onTouchStart={(e) => {
+                    if (e.touches.length === 1 && !isTouchPinching) {
+                      setShowOriginal(true);
+                    } else if (e.touches.length > 1) {
+                      setShowOriginal(false);
+                      setIsTouchPinching(true);
+                    }
+                  }}
+                  onTouchMove={handleMultiTouchMove}
+                  onTouchEnd={handleMultiTouchEnd}
+                  onTouchCancel={handleMultiTouchEnd}
                   className={`px-2.5 py-1.5 rounded-lg text-xs border transition-all select-none flex items-center gap-1.5 flex-shrink-0 ${
                     showOriginal
                       ? 'bg-zinc-700 text-zinc-200 border-zinc-600'
@@ -1262,7 +1293,7 @@ export default function AppLayout() {
               onTouchMove={(e) => handleSplitMove(e.touches[0].clientX)}
               onTouchEnd={() => setDraggingSplit(false)}
             >
-              <div className="relative inline-block w-auto max-w-full max-h-full overflow-visible" style={{ marginInline: 'auto', ...frameWrapperStyle, ...wrapperTransformStyle }}>
+              <div className="relative inline-block w-auto max-w-full max-h-full overflow-visible" style={{ ...frameWrapperStyle, ...wrapperTransformStyle }}>
                 <canvas
                   ref={originalCanvasRef}
                   className="w-full h-full block"
@@ -1351,13 +1382,13 @@ export default function AppLayout() {
               onMouseDown={() => setShowOriginal(true)}
               onMouseUp={() => setShowOriginal(false)}
               onMouseLeave={() => setShowOriginal(false)}
-              onTouchStart={(e) => e.touches.length === 1 && setShowOriginal(true)}
-              onTouchMove={(e) => { if (e.touches.length > 1) setShowOriginal(false); }}
-              onTouchEnd={() => setShowOriginal(false)}
-              onTouchCancel={() => setShowOriginal(false)}
+              onTouchStart={handleMultiTouchStart}
+              onTouchMove={handleMultiTouchMove}
+              onTouchEnd={handleMultiTouchEnd}
+              onTouchCancel={handleMultiTouchEnd}
             >
               <div className="relative flex items-center justify-center max-w-full" style={{ backgroundColor: frameBackground, padding: framePadding, width: '100%' }}>
-                <div className="relative inline-block w-auto max-w-full overflow-visible" style={{ marginInline: 'auto', ...frameWrapperStyle, ...wrapperTransformStyle }}>
+                <div className="relative inline-block w-auto max-w-full overflow-visible" style={{ ...frameWrapperStyle, ...wrapperTransformStyle }}>
                   <canvas
                     ref={canvasRef}
                     className="block shadow-2xl opacity-100"
