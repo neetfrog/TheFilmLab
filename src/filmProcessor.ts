@@ -4,6 +4,15 @@
 import { FilmPreset } from './filmPresets';
 import { generateGrainChannels, applyGrain } from './grainEngine';
 
+const curveLUTCache = new Map<string, Uint8Array>();
+const contrastLUTCache = new Map<string, Uint8Array>();
+const levelsLUTCache = new Map<string, Uint8Array>();
+const vignetteDistanceCache = new Map<string, Float32Array>();
+
+function getLUTCacheKey(prefix: string, values: Array<number | string>) {
+  return `${prefix}:${values.join(',')}`;
+}
+
 // Fast cubic interpolation for curve points
 function interpolateCurve(points: [number, number][], x: number): number {
   if (x <= points[0][0]) return points[0][1];
@@ -44,37 +53,63 @@ function interpolateCurve(points: [number, number][], x: number): number {
 
 // Build lookup tables for fast curve application
 function buildCurveLUT(points: [number, number][]): Uint8Array {
+  const cacheKey = points.map(([x, y]) => `${x}:${y}`).join('|');
+  const lookupKey = getLUTCacheKey('curve', [cacheKey]);
+  const cached = curveLUTCache.get(lookupKey);
+  if (cached) return cached;
+
   const lut = new Uint8Array(256);
   for (let i = 0; i < 256; i++) {
     lut[i] = Math.round(interpolateCurve(points, i / 255) * 255);
   }
+
+  curveLUTCache.set(lookupKey, lut);
   return lut;
 }
 
-// Pre-compute vignette LUT for faster application
-function buildVignetteLUT(width: number, height: number, amount: number): Uint8Array {
-  const lut = new Uint8Array(width * height);
+function getVignetteDistanceMap(width: number, height: number): Float32Array {
+  const cacheKey = `${width}x${height}`;
+  const cached = vignetteDistanceCache.get(cacheKey);
+  if (cached) return cached;
+
+  const distances = new Float32Array(width * height);
   const cx = width / 2;
   const cy = height / 2;
   const maxDist = Math.sqrt(cx * cx + cy * cy);
-  const a = amount * 1.5;
-  
+
   for (let y = 0; y < height; y++) {
     const dy = y - cy;
     const dy2 = dy * dy;
     for (let x = 0; x < width; x++) {
       const dx = x - cx;
-      const dist = Math.sqrt(dx * dx + dy2) / maxDist;
-      const vignette = Math.max(0, 1 - a * dist * dist);
-      lut[y * width + x] = Math.round(vignette * 255);
+      distances[y * width + x] = Math.sqrt(dx * dx + dy2) / maxDist;
     }
   }
-  
+
+  vignetteDistanceCache.set(cacheKey, distances);
+  return distances;
+}
+
+// Pre-compute vignette LUT for faster application
+function buildVignetteLUT(width: number, height: number, amount: number): Uint8Array {
+  const distances = getVignetteDistanceMap(width, height);
+  const lut = new Uint8Array(width * height);
+  const a = amount * 1.5;
+
+  for (let i = 0; i < distances.length; i++) {
+    const vignette = Math.max(0, 1 - a * distances[i] * distances[i]);
+    lut[i] = Math.round(vignette * 255);
+  }
+
   return lut;
 }
 
 // S-curve for contrast with toe/shoulder control
 function buildContrastLUT(contrast: number, toe: number, shoulder: number, fadedBlacks: number): Uint8Array {
+  const cacheKey = getLUTCacheKey('contrast', [contrast, toe, shoulder, fadedBlacks]);
+  const cached = contrastLUTCache.get(cacheKey);
+  if (cached) return cached;
+
   const lut = new Uint8Array(256);
   for (let i = 0; i < 256; i++) {
     let x = i / 255;
@@ -110,6 +145,8 @@ function buildContrastLUT(contrast: number, toe: number, shoulder: number, faded
 
     lut[i] = Math.max(0, Math.min(255, Math.round(x * 255)));
   }
+
+  contrastLUTCache.set(cacheKey, lut);
   return lut;
 }
 
@@ -143,6 +180,10 @@ function buildLevelsLUT(
   outputBlack: number,
   outputWhite: number,
 ): Uint8Array {
+  const cacheKey = getLUTCacheKey('levels', [inputBlack, inputWhite, gamma, outputBlack, outputWhite]);
+  const cached = levelsLUTCache.get(cacheKey);
+  if (cached) return cached;
+
   const lut = new Uint8Array(256);
   const inRange = Math.max(0.001, inputWhite - inputBlack);
   const invGamma = 1 / Math.max(0.01, gamma);
@@ -156,6 +197,7 @@ function buildLevelsLUT(
     lut[i] = Math.round(Math.max(0, Math.min(1, value)) * 255);
   }
 
+  levelsLUTCache.set(cacheKey, lut);
   return lut;
 }
 
@@ -436,8 +478,6 @@ function applyPurpleFringing(imageData: ImageData, amount: number, width: number
   // Create separate channels for chromatic shift
   for (let y = 0; y < height; y++) {
     for (let x = 0; x < width; x++) {
-      const idx = (y * width + x) * 4;
-
       // Red channel stays in place
       // Green channel shifts slightly toward upper-left
       // Blue channel shifts toward lower-right for purple/magenta fringing effect

@@ -132,15 +132,6 @@ export function useFilmLabState() {
     }
   }, [splitView]);
 
-  useEffect(() => {
-    if (!splitView && processedImageData && canvasRef.current) {
-      const canvas = canvasRef.current;
-      canvas.width = processedImageData.width;
-      canvas.height = processedImageData.height;
-      canvas.getContext('2d')!.putImageData(processedImageData, 0, 0);
-    }
-  }, [splitView, processedImageData]);
-
   const currentParams: ProcessingParams = useMemo(() => ({
     grainAmountOverride: grainAmount ?? undefined,
     grainSizeOverride: grainSize ?? undefined,
@@ -177,11 +168,8 @@ export function useFilmLabState() {
       setProcessing(true);
       requestAnimationFrame(() => {
         const result = processImage(imageData, selectedPreset, currentParams, grainSeed);
-        const canvas = canvasRef.current!;
-        canvas.width = result.width;
-        canvas.height = result.height;
-        const ctx = canvas.getContext('2d')!;
-        ctx.putImageData(result, 0, 0);
+        const canvas = canvasRef.current;
+        if (!canvas) return;
 
         setProcessedImageData(result);
         processedCanvasRef.current = canvas;

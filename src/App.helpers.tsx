@@ -376,6 +376,11 @@ export function drawImageDataRotated(ctx: CanvasRenderingContext2D, source: Imag
   const width = source.width;
   const height = source.height;
 
+  if (normalized === 0) {
+    ctx.putImageData(source, 0, 0);
+    return;
+  }
+
   const temp = document.createElement('canvas');
   temp.width = width;
   temp.height = height;
