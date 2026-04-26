@@ -167,15 +167,13 @@ export default function AppLayout() {
 
   const presetCategories = ['all', 'color-negative', 'bw-negative', 'slide', 'cinema', 'custom', 'favorites'] as const;
   const activeCategory = showFavoritesOnly ? 'favorites' : filterType;
-  const normalizedRotation = ((rotation % 360) + 360) % 360;
   const frameAspect = selectedFrame && frameAspectRatio
-    ? normalizedRotation === 90 || normalizedRotation === 270
-      ? 1 / frameAspectRatio
-      : frameAspectRatio
+    ? frameAspectRatio
     : null;
   const frameWrapperStyle = frameAspect
     ? { aspectRatio: frameAspect, maxWidth: '100%', maxHeight: 'calc(100vh - 52px)' }
     : { maxWidth: '100%', maxHeight: 'calc(100vh - 52px)' };
+  const wrapperTransformStyle = zoom !== 1 ? { transform: `scale(${zoom})`, transformOrigin: 'center center' } : undefined;
 
   const selectPresetCategory = (category: typeof presetCategories[number]) => {
     if (category === 'favorites') {
@@ -773,12 +771,12 @@ export default function AppLayout() {
                     <SliderControl
                       label="Rotation"
                       value={rotation}
-                      min={-180}
-                      max={180}
+                      min={-45}
+                      max={45}
                       step={1}
                       defaultValue={0}
                       format={(v) => `${v.toFixed(0)}°`}
-                      onChange={(v) => setRotation(v ?? 0)}
+                      onChange={(v) => setRotation(Math.min(45, Math.max(-45, v ?? 0)))}
                     />
                   </div>
                   <button
@@ -928,7 +926,7 @@ export default function AppLayout() {
               onTouchMove={(e) => handleSplitMove(e.touches[0].clientX)}
               onTouchEnd={() => setDraggingSplit(false)}
             >
-              <div className="relative inline-block max-w-full max-h-full overflow-hidden" style={{ ...frameWrapperStyle, transform: `scale(${zoom}) rotate(${rotation}deg)`, transformOrigin: 'center center' }}>
+              <div className="relative inline-block max-w-full max-h-full overflow-hidden" style={{ ...frameWrapperStyle, ...wrapperTransformStyle }}>
                 <canvas ref={originalCanvasRef} className="w-full h-full block" style={{ objectFit: selectedFrame ? 'cover' : 'contain' }} />
                 <div className="absolute inset-0 overflow-hidden pointer-events-none" style={{ clipPath: `inset(0 0 0 ${splitPos}%)` }}>
                   <canvas ref={canvasRef} className="w-full h-full block" style={{ objectFit: selectedFrame ? 'cover' : 'contain' }} />
@@ -1002,7 +1000,7 @@ export default function AppLayout() {
               onTouchCancel={() => setShowOriginal(false)}
             >
               <div className="relative flex items-center justify-center max-w-full" style={{ backgroundColor: frameBackground, padding: framePadding }}>
-                <div className="relative inline-block max-w-full overflow-hidden" style={{ ...frameWrapperStyle, transform: `scale(${zoom}) rotate(${rotation}deg)`, transformOrigin: 'center center' }}>
+                <div className="relative inline-block max-w-full overflow-hidden" style={{ ...frameWrapperStyle, ...wrapperTransformStyle }}>
                   <canvas
                     ref={canvasRef}
                     className={`block w-full h-full shadow-2xl ${

@@ -371,6 +371,32 @@ export function getCanvasImageSourceDimensions(source: CanvasImageSource) {
   return { width: 0, height: 0 };
 }
 
+export function drawImageDataRotated(ctx: CanvasRenderingContext2D, source: ImageData, angle: number) {
+  const normalized = ((angle % 360) + 360) % 360;
+  const width = source.width;
+  const height = source.height;
+
+  const temp = document.createElement('canvas');
+  temp.width = width;
+  temp.height = height;
+  temp.getContext('2d')!.putImageData(source, 0, 0);
+
+  const radians = (normalized * Math.PI) / 180;
+  const absCos = Math.abs(Math.cos(radians));
+  const absSin = Math.abs(Math.sin(radians));
+  const widthScale = absCos + (height / width) * absSin;
+  const heightScale = absCos + (width / height) * absSin;
+  const scale = Math.max(widthScale, heightScale);
+
+  ctx.clearRect(0, 0, width, height);
+  ctx.save();
+  ctx.translate(width / 2, height / 2);
+  ctx.rotate(radians);
+  ctx.scale(scale, scale);
+  ctx.drawImage(temp, -width / 2, -height / 2, width, height);
+  ctx.restore();
+}
+
 export function drawImageCover(ctx: CanvasRenderingContext2D, img: CanvasImageSource, w: number, h: number) {
   const { width: imgWidth, height: imgHeight } = getCanvasImageSourceDimensions(img);
   const imgAR = imgWidth / imgHeight;

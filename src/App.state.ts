@@ -8,6 +8,7 @@ import {
   saveToStorage,
   CANVAS_BLEND,
   drawImageCover,
+  drawImageDataRotated,
   getCanvasImageSourceDimensions,
   rotateImageData,
   cropImageDataRect,
@@ -66,6 +67,7 @@ export function useFilmLabState() {
   const [selectedFrame, setSelectedFrame] = useState<string | null>(null);
   const [frameAspectRatio, setFrameAspectRatio] = useState<number | null>(null);
   const [rotation, setRotation] = useState(0);
+  const clampRotationValue = useCallback((value: number) => Math.min(45, Math.max(-45, value)), []);
 
   const [grainAmount, setGrainAmount] = useState<number | null>(null);
   const [grainSize, setGrainSize] = useState<number | null>(null);
@@ -192,35 +194,25 @@ export function useFilmLabState() {
     };
   }, [imageData, selectedPreset, currentParams, grainSeed]);
 
-  useEffect(() => {
-    if (!imageData || !originalCanvasRef.current) return;
-    const canvas = originalCanvasRef.current;
-    canvas.width = imageData.width;
-    canvas.height = imageData.height;
-    canvas.getContext('2d')!.putImageData(imageData, 0, 0);
-  }, [imageData]);
+  const renderPreviewCanvas = useCallback((canvas: HTMLCanvasElement, source: ImageData, angle: number) => {
+    canvas.width = source.width;
+    canvas.height = source.height;
+    const ctx = canvas.getContext('2d');
+    if (!ctx) return;
+    drawImageDataRotated(ctx, source, angle);
+  }, []);
 
   useEffect(() => {
-    if (!processedImageData || !canvasRef.current) return;
     const canvas = canvasRef.current;
-    canvas.width = processedImageData.width;
-    canvas.height = processedImageData.height;
-    canvas.getContext('2d')!.putImageData(processedImageData, 0, 0);
-  }, [processedImageData]);
+    const source = processedImageData ?? imageData;
+    if (!canvas || !source) return;
+    renderPreviewCanvas(canvas, source, rotation);
+  }, [renderPreviewCanvas, processedImageData, imageData, rotation]);
 
   useEffect(() => {
-    if (!splitView || !imageData) return;
-    if (originalCanvasRef.current) {
-      originalCanvasRef.current.width = imageData.width;
-      originalCanvasRef.current.height = imageData.height;
-      originalCanvasRef.current.getContext('2d')!.putImageData(imageData, 0, 0);
-    }
-    if (canvasRef.current && processedImageData) {
-      canvasRef.current.width = processedImageData.width;
-      canvasRef.current.height = processedImageData.height;
-      canvasRef.current.getContext('2d')!.putImageData(processedImageData, 0, 0);
-    }
-  }, [splitView, imageData, processedImageData]);
+    if (!splitView || !imageData || !originalCanvasRef.current) return;
+    renderPreviewCanvas(originalCanvasRef.current, imageData, rotation);
+  }, [renderPreviewCanvas, splitView, imageData, rotation]);
 
   useEffect(() => {
     overlayImgRef.current = [];
@@ -294,7 +286,7 @@ export function useFilmLabState() {
     setOverlayOpacity(entry.editState.overlayOpacity);
     setOverlayBlend(entry.editState.overlayBlend);
     setSelectedFrame(entry.editState.selectedFrame);
-    setRotation(entry.editState.rotation);
+    setRotation(clampRotationValue(entry.editState.rotation));
     setGrainAmount(entry.editState.grainAmount);
     setGrainSize(entry.editState.grainSize);
     setGrainRoughness(entry.editState.grainRoughness);
@@ -421,7 +413,7 @@ export function useFilmLabState() {
     setOverlayOpacity(entry.editState.overlayOpacity);
     setOverlayBlend(entry.editState.overlayBlend);
     setSelectedFrame(entry.editState.selectedFrame);
-    setRotation(entry.editState.rotation);
+    setRotation(clampRotationValue(entry.editState.rotation));
     setGrainAmount(entry.editState.grainAmount);
     setGrainSize(entry.editState.grainSize);
     setGrainRoughness(entry.editState.grainRoughness);
@@ -541,9 +533,9 @@ export function useFilmLabState() {
     setOverlayOpacity(snapshot.overlayOpacity);
     setOverlayBlend(snapshot.overlayBlend);
     setSelectedFrame(snapshot.selectedFrame);
-    setRotation(snapshot.rotation);
+    setRotation(clampRotationValue(snapshot.rotation));
     setActiveBatchIndex(snapshot.activeBatchIndex);
-  }, []);
+  }, [clampRotationValue]);
 
   const pushHistory = useCallback(() => {
     const snapshot = createSnapshot();
@@ -665,8 +657,8 @@ export function useFilmLabState() {
     setImageData(rotated);
     originalImageDataRef.current = rotated;
     setProcessedImageData(null);
-    setRotation((prev) => ((prev + angle) % 360 + 360) % 360);
-  }, [imageData, pushHistory]);
+    setRotation((prev) => clampRotationValue(prev + angle));
+  }, [imageData, pushHistory, clampRotationValue]);
 
   const applyCrop = useCallback(() => {
     if (!imageData || !cropRect) return;
