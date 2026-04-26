@@ -84,6 +84,7 @@ export default function AppLayout() {
     overlayOpacity,
     overlayBlend,
     selectedFrame,
+    frameAspectRatio,
     rotation,
     canvasRef,
     originalCanvasRef,
@@ -167,6 +168,7 @@ export default function AppLayout() {
   const presetCategories = ['all', 'color-negative', 'bw-negative', 'slide', 'cinema', 'custom', 'favorites'] as const;
   const activeCategory = showFavoritesOnly ? 'favorites' : filterType;
   const rotatedFitStyle = rotation % 180 !== 0 ? { width: 'auto', height: '100%' } : { width: '100%', height: 'auto' };
+  const frameWrapperStyle = selectedFrame && frameAspectRatio ? { aspectRatio: frameAspectRatio, maxWidth: '100%', maxHeight: 'calc(100vh - 52px)' } : { maxWidth: '100%', maxHeight: 'calc(100vh - 52px)' };
 
   const selectPresetCategory = (category: typeof presetCategories[number]) => {
     if (category === 'favorites') {
@@ -913,10 +915,10 @@ export default function AppLayout() {
               onTouchMove={(e) => handleSplitMove(e.touches[0].clientX)}
               onTouchEnd={() => setDraggingSplit(false)}
             >
-              <div className="relative inline-block max-w-full max-h-full overflow-hidden" style={{ transform: `scale(${zoom})`, transformOrigin: 'center center' }}>
-                <canvas ref={originalCanvasRef} className="max-w-full max-h-[calc(100vh-52px)] object-contain block" />
+              <div className="relative inline-block max-w-full max-h-full overflow-hidden" style={{ ...frameWrapperStyle, transform: `scale(${zoom})`, transformOrigin: 'center center' }}>
+                <canvas ref={originalCanvasRef} className="w-full h-full block" style={{ objectFit: selectedFrame ? 'cover' : 'contain' }} />
                 <div className="absolute inset-0 overflow-hidden pointer-events-none" style={{ clipPath: `inset(0 0 0 ${splitPos}%)` }}>
-                  <canvas ref={canvasRef} className="max-w-full max-h-[calc(100vh-52px)] object-contain block" />
+                  <canvas ref={canvasRef} className="w-full h-full block" style={{ objectFit: selectedFrame ? 'cover' : 'contain' }} />
                 </div>
                 <div
                   className="absolute top-0 bottom-0 cursor-col-resize z-10"
@@ -963,10 +965,11 @@ export default function AppLayout() {
                         position: 'absolute',
                         left: '50%',
                         top: '50%',
-                        objectFit: 'cover',
+                        width: '100%',
+                        height: '100%',
+                        objectFit: 'contain',
                         transform: `translate(-50%, -50%) rotate(${rotation}deg)`,
                         transformOrigin: 'center center',
-                        ...rotatedFitStyle,
                       }}
                       alt=""
                     />
@@ -985,13 +988,13 @@ export default function AppLayout() {
               onTouchCancel={() => setShowOriginal(false)}
             >
               <div className="relative flex items-center justify-center max-w-full" style={{ backgroundColor: frameBackground, padding: framePadding }}>
-                <div className="relative inline-block max-w-full overflow-hidden" style={{ transform: `scale(${zoom})`, transformOrigin: 'center center' }}>
+                <div className="relative inline-block max-w-full overflow-hidden" style={{ ...frameWrapperStyle, transform: `scale(${zoom})`, transformOrigin: 'center center' }}>
                   <canvas
                     ref={canvasRef}
-                    className={`block max-w-full max-h-[calc(100vh-52px)] shadow-2xl ${
+                    className={`block w-full h-full shadow-2xl ${
                       showOriginal ? 'opacity-0 pointer-events-none' : 'opacity-100'
                     }`}
-                    style={{ imageRendering: 'auto' }}
+                    style={{ imageRendering: 'auto', objectFit: selectedFrame ? 'cover' : 'contain' }}
                   />
                   {cropMode && cropRect && (
                     <div className="absolute inset-0 pointer-events-auto">
@@ -1059,10 +1062,11 @@ export default function AppLayout() {
                         position: 'absolute',
                         left: '50%',
                         top: '50%',
-                        objectFit: 'cover',
+                        width: '100%',
+                        height: '100%',
+                        objectFit: 'contain',
                         transform: `translate(-50%, -50%) rotate(${rotation}deg)`,
                         transformOrigin: 'center center',
-                        ...rotatedFitStyle,
                       }}
                       alt=""
                     />

@@ -7,8 +7,8 @@ import {
   loadFromStorage,
   saveToStorage,
   CANVAS_BLEND,
-  drawImageCover,
   drawImageCoverRotated,
+  drawImageContainRotated,
   rotateImageData,
   cropImageDataRect,
 } from './App.helpers';
@@ -64,6 +64,7 @@ export function useFilmLabState() {
   const [overlayOpacity, setOverlayOpacity] = useState(0.6);
   const [overlayBlend, setOverlayBlend] = useState<'screen' | 'multiply' | 'overlay' | 'soft-light' | 'normal'>('screen');
   const [selectedFrame, setSelectedFrame] = useState<string | null>(null);
+  const [frameAspectRatio, setFrameAspectRatio] = useState<number | null>(null);
   const [rotation, setRotation] = useState(0);
 
   const [grainAmount, setGrainAmount] = useState<number | null>(null);
@@ -231,9 +232,16 @@ export function useFilmLabState() {
   }, [selectedOverlays]);
 
   useEffect(() => {
-    if (!selectedFrame) { frameImgRef.current = null; return; }
+    if (!selectedFrame) {
+      frameImgRef.current = null;
+      setFrameAspectRatio(null);
+      return;
+    }
     const img = new Image();
-    img.onload = () => { frameImgRef.current = img; };
+    img.onload = () => {
+      frameImgRef.current = img;
+      setFrameAspectRatio(img.naturalWidth / img.naturalHeight);
+    };
     img.src = selectedFrame;
   }, [selectedFrame]);
 
@@ -847,7 +855,7 @@ export function useFilmLabState() {
     }
     if (selectedFrame && frameImgRef.current) {
       ctx.save();
-      drawImageCoverRotated(ctx, frameImgRef.current, dstCanvas.width, dstCanvas.height, rotation);
+      drawImageContainRotated(ctx, frameImgRef.current, dstCanvas.width, dstCanvas.height, rotation);
       ctx.restore();
     }
     const link = document.createElement('a');
@@ -1167,6 +1175,7 @@ export function useFilmLabState() {
     currentParams,
     frameBackground,
     framePadding,
+    frameAspectRatio,
     getCurrentBatchEditState,
     displayedPresets,
     filteredPresets,

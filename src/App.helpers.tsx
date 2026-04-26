@@ -423,6 +423,23 @@ export function drawImageCoverRotated(ctx: CanvasRenderingContext2D, img: Canvas
   ctx.restore();
 }
 
+export function drawImageContainRotated(ctx: CanvasRenderingContext2D, img: CanvasImageSource, w: number, h: number, angle: number) {
+  const normalized = ((angle % 360) + 360) % 360;
+  const swap = normalized === 90 || normalized === 270;
+  const { width: imgWidth, height: imgHeight } = getCanvasImageSourceDimensions(img);
+  const targetWidth = swap ? h : w;
+  const targetHeight = swap ? w : h;
+  const scale = Math.min(targetWidth / imgWidth, targetHeight / imgHeight);
+  const drawWidth = Math.round(imgWidth * scale);
+  const drawHeight = Math.round(imgHeight * scale);
+
+  ctx.save();
+  ctx.translate(w / 2, h / 2);
+  ctx.rotate((normalized * Math.PI) / 180);
+  ctx.drawImage(img, 0, 0, imgWidth, imgHeight, -drawWidth / 2, -drawHeight / 2, drawWidth, drawHeight);
+  ctx.restore();
+}
+
 export function rotateImageData(source: ImageData, angle: number): ImageData {
   const normalized = ((angle % 360) + 360) % 360;
   const swap = normalized === 90 || normalized === 270;
