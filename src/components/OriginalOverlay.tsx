@@ -1,15 +1,18 @@
 import { useEffect, useRef } from 'react';
+import { drawImageDataRotated } from '../App.helpers';
 
-export default function OriginalOverlay({ imageData, zoom }: { imageData: ImageData; zoom: number }) {
+export default function OriginalOverlay({ imageData, zoom, rotation }: { imageData: ImageData; zoom: number; rotation: number }) {
   const ref = useRef<HTMLCanvasElement>(null);
 
   useEffect(() => {
     if (ref.current) {
       ref.current.width = imageData.width;
       ref.current.height = imageData.height;
-      ref.current.getContext('2d')!.putImageData(imageData, 0, 0);
+      const ctx = ref.current.getContext('2d');
+      if (!ctx) return;
+      drawImageDataRotated(ctx, imageData, rotation);
     }
-  }, [imageData]);
+  }, [imageData, rotation]);
 
   return (
     <canvas

@@ -1075,7 +1075,7 @@ export default function AppLayout() {
                     />
                   )}
                 </div>
-                {showOriginal && imageData && <OriginalOverlay imageData={imageData} zoom={zoom} />}
+                {showOriginal && imageData && <OriginalOverlay imageData={imageData} zoom={zoom} rotation={rotation} />}
               </div>
             </div>
           )}

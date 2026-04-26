@@ -255,7 +255,7 @@ export function useFilmLabState() {
     const source = processedImageData ?? imageData;
     if (!canvas || !source) return;
     renderPreviewCanvas(canvas, source, rotation);
-  }, [renderPreviewCanvas, processedImageData, imageData, rotation, splitView]);
+  }, [renderPreviewCanvas, processedImageData, imageData, rotation, splitView, showOriginal]);
 
   useEffect(() => {
     if (!splitView || !imageData || !originalCanvasRef.current) return;
