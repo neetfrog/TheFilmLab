@@ -129,9 +129,7 @@ export function useFilmLabState() {
   }, [selectedPreset.id]);
 
   useEffect(() => {
-    if (splitView) {
-      setShowOriginal(false);
-    }
+    setShowOriginal(false);
   }, [splitView]);
 
   const currentParams: ProcessingParams = useMemo(() => ({
@@ -257,7 +255,7 @@ export function useFilmLabState() {
     const source = processedImageData ?? imageData;
     if (!canvas || !source) return;
     renderPreviewCanvas(canvas, source, rotation);
-  }, [renderPreviewCanvas, processedImageData, imageData, rotation]);
+  }, [renderPreviewCanvas, processedImageData, imageData, rotation, splitView]);
 
   useEffect(() => {
     if (!splitView || !imageData || !originalCanvasRef.current) return;
