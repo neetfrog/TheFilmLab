@@ -415,8 +415,8 @@ export default function AppLayout() {
   return (
     <div className="h-screen bg-zinc-950 text-zinc-100 flex flex-col overflow-hidden">
       <header className="border-b border-zinc-800/60 bg-zinc-950/90 backdrop-blur-xl z-50 shrink-0">
-        <div className="px-4 py-2.5 flex items-center justify-between">
-          <div className="flex items-center gap-3">
+        <div className="px-5 py-3 flex items-center justify-between">
+          <div className="flex items-center gap-4">
             <button
               onClick={() => setSidebarOpen(!sidebarOpen)}
               className="md:hidden p-1.5 rounded-lg hover:bg-zinc-800/50 transition-colors text-zinc-400 hover:text-zinc-200"
@@ -432,7 +432,7 @@ export default function AppLayout() {
           </div>
 
           <div
-            className="flex items-center gap-2 overflow-x-auto max-w-full"
+            className="flex items-center gap-3 overflow-x-auto max-w-full"
             style={{ WebkitOverflowScrolling: 'touch' }}
           >
             <button
@@ -822,6 +822,8 @@ export default function AppLayout() {
                   defaultValue={selectedPreset.contrast} onChange={setContrastAmount} format={(v) => `${v > 0 ? '+' : ''}${(v * 100).toFixed(0)}`} icon={<ContrastIcon />} />
                 <SliderControl label="Brightness" value={eff.brightness} min={-0.3} max={0.3} step={0.01}
                   defaultValue={selectedPreset.brightness} onChange={setBrightnessAmount} format={(v) => `${v > 0 ? '+' : ''}${(v * 100).toFixed(0)}`} icon={<BrightnessIcon />} />
+                <SliderControl label="Saturation" value={eff.saturation} min={0} max={2} step={0.01}
+                  defaultValue={selectedPreset.saturation} onChange={setSaturationAmount} format={(v) => `${(v * 100).toFixed(0)}%`} icon={<SaturationIcon />} />
                 <SliderControl label="Cross Process" value={eff.crossProcess} min={-1} max={1} step={0.05}
                   defaultValue={selectedPreset.crossProcess ?? 0} onChange={setCrossProcessAmount} format={(v) => v > 0 ? `+${(v * 100).toFixed(0)}% Magenta` : v < 0 ? `${(v * 100).toFixed(0)}% Green` : 'Neutral'} icon={<ColorShiftIcon />} />
                 <SliderControl label="Push / Pull" value={eff.pushPull} min={-1} max={1} step={0.01}
@@ -913,8 +915,6 @@ export default function AppLayout() {
                     defaultValue={selectedPreset.vignette} onChange={setVignetteAmount} format={(v) => `${(v * 100).toFixed(0)}%`} icon={<VignetteIcon />} />
                   <SliderControl label="Halation" value={eff.halation} min={0} max={0.8} step={0.01}
                     defaultValue={selectedPreset.halation} onChange={setHalationAmount} format={(v) => `${(v * 100).toFixed(0)}%`} icon={<HalationIcon />} />
-                  <SliderControl label="Saturation" value={eff.saturation} min={0} max={2} step={0.01}
-                    defaultValue={selectedPreset.saturation} onChange={setSaturationAmount} format={(v) => `${(v * 100).toFixed(0)}%`} icon={<SaturationIcon />} />
                   <SliderControl label="Faded Blacks" value={eff.fadedBlacks} min={0} max={0.25} step={0.005}
                     defaultValue={selectedPreset.fadedBlacks} onChange={setFadedBlacks} format={(v) => `${(v * 100).toFixed(0)}%`} icon={<FadedBlacksIcon />} />
                 </div>
@@ -1350,30 +1350,6 @@ export default function AppLayout() {
                 </div>
                 <div className="absolute top-2 left-2 bg-black/60 text-white/80 text-[10px] font-medium px-2 py-0.5 rounded-md backdrop-blur-sm">Original</div>
                 <div className="absolute top-2 right-2 bg-black/60 text-white/80 text-[10px] font-medium px-2 py-0.5 rounded-md backdrop-blur-sm">{selectedPreset.name}</div>
-                {selectedOverlays.length > 0 && (
-                  <div className="absolute inset-0 overflow-hidden pointer-events-none" style={{ clipPath: `inset(0 0 0 ${splitPos}%)` }}>
-                    {selectedOverlays.map((overlayUrl) => (
-                      <img
-                        key={overlayUrl}
-                        src={overlayUrl}
-                        className="absolute pointer-events-none"
-                        style={{
-                          position: 'absolute',
-                          left: '50%',
-                          top: '50%',
-                          width: '100%',
-                          height: '100%',
-                          objectFit: 'cover',
-                          opacity: getOverlayOpacity(overlayUrl),
-                          mixBlendMode: getOverlayBlendMode(overlayUrl),
-                          transform: 'translate(-50%, -50%)',
-                          transformOrigin: 'center center',
-                        }}
-                        alt=""
-                      />
-                    ))}
-                  </div>
-                )}
                 {selectedFrame && (
                   <div className="absolute inset-0 overflow-hidden pointer-events-none" style={{ clipPath: `inset(0 0 0 ${splitPos}%)` }}>
                     <img
@@ -1462,26 +1438,6 @@ export default function AppLayout() {
                       </div>
                     </div>
                   )}
-                  {!showOriginal && selectedOverlays.length > 0 && selectedOverlays.map((overlayUrl) => (
-                    <img
-                      key={overlayUrl}
-                      src={overlayUrl}
-                      className="absolute pointer-events-none"
-                      style={{
-                        position: 'absolute',
-                        left: '50%',
-                        top: '50%',
-                        width: '100%',
-                        height: '100%',
-                        objectFit: 'cover',
-                        opacity: getOverlayOpacity(overlayUrl),
-                        mixBlendMode: getOverlayBlendMode(overlayUrl),
-                        transform: 'translate(-50%, -50%)',
-                        transformOrigin: 'center center',
-                      }}
-                      alt=""
-                    />
-                  ))}
                   {!showOriginal && selectedFrame && (
                     <img
                       src={selectedFrame}

@@ -27,6 +27,11 @@ import type { OverlayCategory, BlendMode } from './App.helpers';
 import type { ProcessingParams } from './filmProcessor';
 import type { FilmPreset } from './filmPresets';
 
+const OVERLAY_CATEGORY_MAP = new Map<string, OverlayCategory>();
+(['lightleaks', 'bokeh', 'textures', 'paper'] as const).forEach((category) => {
+  OVERLAYS[category].urls.forEach((url) => OVERLAY_CATEGORY_MAP.set(url, category));
+});
+
 export function useFilmLabState() {
   const [image, setImage] = useState<HTMLImageElement | null>(null);
   const [imageData, setImageData] = useState<ImageData | null>(null);
@@ -78,6 +83,7 @@ export function useFilmLabState() {
     textures: 'screen',
     paper: 'overlay',
   });
+  const [overlayImagesLoadedAt, setOverlayImagesLoadedAt] = useState(0);
   const [selectedFrame, setSelectedFrame] = useState<string | null>(null);
   const [frameAspectRatio, setFrameAspectRatio] = useState<number | null>(null);
   const [rotation, setRotation] = useState(0);
@@ -333,7 +339,22 @@ export function useFilmLabState() {
     };
   }, [imageData, previewImageData, currentPreset, currentParams, grainSeed, processImageInWorker]);
 
-  const renderPreviewCanvas = useCallback((canvas: HTMLCanvasElement, source: ImageData, angle: number) => {
+  const drawCanvasOverlays = useCallback((ctx: CanvasRenderingContext2D, width: number, height: number) => {
+    if (selectedOverlays.length === 0 || overlayImgRef.current.length === 0) return;
+    selectedOverlays.forEach((url, index) => {
+      const category = OVERLAY_CATEGORY_MAP.get(url);
+      if (!category) return;
+      const overlayImg = overlayImgRef.current[index];
+      if (!overlayImg) return;
+      ctx.save();
+      ctx.globalAlpha = overlayOpacityByCategory[category];
+      ctx.globalCompositeOperation = CANVAS_BLEND[overlayBlendByCategory[category]] || 'source-over';
+      drawImageCover(ctx, overlayImg, width, height);
+      ctx.restore();
+    });
+  }, [selectedOverlays, overlayOpacityByCategory, overlayBlendByCategory]);
+
+  const renderPreviewCanvas = useCallback((canvas: HTMLCanvasElement, source: ImageData, angle: number, drawOverlays: boolean) => {
     if (canvas.width !== source.width || canvas.height !== source.height) {
       canvas.width = source.width;
       canvas.height = source.height;
@@ -341,26 +362,32 @@ export function useFilmLabState() {
     const ctx = canvas.getContext('2d');
     if (!ctx) return;
     drawImageDataRotated(ctx, source, angle);
-  }, []);
+    if (drawOverlays) {
+      drawCanvasOverlays(ctx, canvas.width, canvas.height);
+    }
+  }, [drawCanvasOverlays]);
 
   useEffect(() => {
     const canvas = canvasRef.current;
     const source = showOriginal ? previewImageData ?? imageData : processedImageData ?? previewImageData ?? imageData;
     if (!canvas || !source) return;
-    renderPreviewCanvas(canvas, source, rotation);
-  }, [renderPreviewCanvas, processedImageData, previewImageData, imageData, rotation, splitView, showOriginal]);
+    renderPreviewCanvas(canvas, source, rotation, !showOriginal);
+  }, [renderPreviewCanvas, processedImageData, previewImageData, imageData, rotation, splitView, showOriginal, overlayImagesLoadedAt]);
 
   useEffect(() => {
     if (!splitView || !imageData || !originalCanvasRef.current) return;
     const source = previewImageData ?? imageData;
-    renderPreviewCanvas(originalCanvasRef.current, source, rotation);
+    renderPreviewCanvas(originalCanvasRef.current, source, rotation, false);
   }, [renderPreviewCanvas, splitView, imageData, previewImageData, rotation]);
 
   useEffect(() => {
     overlayImgRef.current = [];
-    selectedOverlays.forEach((url) => {
+    selectedOverlays.forEach((url, index) => {
       const img = new Image();
-      img.onload = () => { overlayImgRef.current.push(img); };
+      img.onload = () => {
+        overlayImgRef.current[index] = img;
+        setOverlayImagesLoadedAt((prev) => prev + 1);
+      };
       img.src = url;
     });
   }, [selectedOverlays]);
