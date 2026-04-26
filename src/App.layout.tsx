@@ -1124,7 +1124,7 @@ export default function AppLayout() {
                 </div>
                 <div className="text-center">
                   <p className="text-zinc-300 font-medium text-sm">Drop an image or click to upload</p>
-                  <p className="text-zinc-700 text-xs mt-1">JPG, PNG, WebP — max 1600px</p>
+                  <p className="text-zinc-700 text-xs mt-1">JPG, PNG, WebP</p>
                 </div>
               </div>
 
