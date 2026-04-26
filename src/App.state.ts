@@ -118,6 +118,7 @@ export function useFilmLabState() {
   const overlayImgRef = useRef<HTMLImageElement[]>([]);
   const frameImgRef = useRef<HTMLImageElement | null>(null);
   const originalImageDataRef = useRef<ImageData | null>(null);
+  const originalImageData = originalImageDataRef.current;
 
   useEffect(() => {
     setGrainAmount(null);
@@ -308,7 +309,7 @@ export function useFilmLabState() {
 
   useEffect(() => {
     const canvas = canvasRef.current;
-    const source = processedImageData ?? previewImageData ?? imageData;
+    const source = showOriginal ? previewImageData ?? imageData : processedImageData ?? previewImageData ?? imageData;
     if (!canvas || !source) return;
     renderPreviewCanvas(canvas, source, rotation);
   }, [renderPreviewCanvas, processedImageData, previewImageData, imageData, rotation, splitView, showOriginal]);
@@ -1426,6 +1427,7 @@ export function useFilmLabState() {
     setSelectedPreset,
     selectPreset,
     currentParams,
+    originalImageData,
     frameBackground,
     framePadding,
     frameAspectRatio,

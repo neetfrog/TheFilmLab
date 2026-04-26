@@ -6,7 +6,6 @@ import logo from './favicon/logo.png';
 import SectionHeader from './components/SectionHeader';
 import SliderControl from './components/SliderControl';
 import LevelsHistogram from './components/LevelsHistogram';
-import OriginalOverlay from './components/OriginalOverlay';
 import { useFilmLabState } from './App.state';
 import {
   typeLabels,
@@ -54,7 +53,6 @@ export default function AppLayout() {
 
   const {
     image,
-    imageData,
     selectedPreset,
     favorites,
     customPresetName,
@@ -172,9 +170,29 @@ export default function AppLayout() {
   const frameAspect = selectedFrame && frameAspectRatio
     ? frameAspectRatio
     : null;
+  const imageMaxHeight = 'calc(100vh - 116px)';
   const frameWrapperStyle = frameAspect
-    ? { aspectRatio: frameAspect, maxWidth: '100%', maxHeight: 'calc(100vh - 52px)' }
-    : { maxWidth: '100%', maxHeight: 'calc(100vh - 52px)' };
+    ? {
+        display: 'flex',
+        alignItems: 'center',
+        justifyContent: 'center',
+        width: '100%',
+        height: '100%',
+        aspectRatio: frameAspect,
+        maxWidth: '100%',
+        maxHeight: imageMaxHeight,
+        minHeight: 0,
+      }
+    : {
+        display: 'flex',
+        alignItems: 'center',
+        justifyContent: 'center',
+        width: '100%',
+        height: '100%',
+        maxWidth: '100%',
+        maxHeight: imageMaxHeight,
+        minHeight: 0,
+      };
   const wrapperTransformStyle = zoom !== 1 ? { transform: `scale(${zoom})`, transformOrigin: 'center center' } : undefined;
 
   const selectPresetCategory = (category: typeof presetCategories[number]) => {
@@ -904,7 +922,7 @@ export default function AppLayout() {
 
         <main
           ref={mainAreaRef}
-          className="flex-1 flex items-center justify-center bg-zinc-950 relative overflow-hidden"
+          className="flex-1 flex items-center justify-center bg-zinc-950 relative overflow-visible"
         >
           {!image ? (
             <div className="flex flex-col items-center gap-6 max-w-lg px-6">
@@ -965,10 +983,30 @@ export default function AppLayout() {
               onTouchMove={(e) => handleSplitMove(e.touches[0].clientX)}
               onTouchEnd={() => setDraggingSplit(false)}
             >
-              <div className="relative inline-block max-w-full max-h-full overflow-hidden" style={{ ...frameWrapperStyle, ...wrapperTransformStyle }}>
-                <canvas ref={originalCanvasRef} className="w-full h-full block" style={{ objectFit: selectedFrame ? 'cover' : 'contain' }} />
+              <div className="relative inline-block max-w-full max-h-full overflow-visible" style={{ ...frameWrapperStyle, ...wrapperTransformStyle }}>
+                <canvas
+                  ref={originalCanvasRef}
+                  className="w-full h-full block"
+                  style={{
+                    objectFit: selectedFrame ? 'cover' : 'contain',
+                    maxWidth: '100%',
+                    maxHeight: '100%',
+                    width: '100%',
+                    height: '100%',
+                  }}
+                />
                 <div className="absolute inset-0 overflow-hidden pointer-events-none" style={{ clipPath: `inset(0 0 0 ${splitPos}%)` }}>
-                  <canvas ref={canvasRef} className="w-full h-full block" style={{ objectFit: selectedFrame ? 'cover' : 'contain' }} />
+                  <canvas
+                    ref={canvasRef}
+                    className="w-full h-full block"
+                    style={{
+                      objectFit: selectedFrame ? 'cover' : 'contain',
+                      maxWidth: '100%',
+                      maxHeight: '100%',
+                      width: '100%',
+                      height: '100%',
+                    }}
+                  />
                 </div>
                 <div
                   className="absolute top-0 bottom-0 cursor-col-resize z-10"
@@ -1039,13 +1077,19 @@ export default function AppLayout() {
               onTouchCancel={() => setShowOriginal(false)}
             >
               <div className="relative flex items-center justify-center max-w-full" style={{ backgroundColor: frameBackground, padding: framePadding }}>
-                <div className="relative inline-block max-w-full overflow-hidden" style={{ ...frameWrapperStyle, ...wrapperTransformStyle }}>
+                <div className="relative inline-block w-full max-w-full overflow-visible" style={{ ...frameWrapperStyle, ...wrapperTransformStyle }}>
                   <canvas
                     ref={canvasRef}
-                    className={`block w-full h-full shadow-2xl ${
-                      showOriginal ? 'opacity-0 pointer-events-none' : 'opacity-100'
-                    }`}
-                    style={{ imageRendering: 'auto', objectFit: selectedFrame ? 'cover' : 'contain' }}
+                    className="block shadow-2xl opacity-100"
+                    style={{
+                      imageRendering: 'auto',
+                      objectFit: selectedFrame ? 'cover' : 'contain',
+                      maxWidth: '100%',
+                      maxHeight: '100%',
+                      width: 'auto',
+                      height: 'auto',
+                      display: 'block',
+                    }}
                   />
                   {cropMode && cropRect && (
                     <div className="absolute inset-0 pointer-events-auto">
@@ -1124,7 +1168,6 @@ export default function AppLayout() {
                     />
                   )}
                 </div>
-                {showOriginal && imageData && <OriginalOverlay imageData={imageData} zoom={zoom} rotation={rotation} />}
               </div>
             </div>
           )}
