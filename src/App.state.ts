@@ -60,6 +60,7 @@ export function useFilmLabState() {
   const [isAboutOpen, setIsAboutOpen] = useState(false);
   const [framingToolOpen, setFramingToolOpen] = useState(false);
   const [zoom, setZoom] = useState(1);
+  const zoomRef = useRef(zoom);
   const [offset, setOffset] = useState({ x: 0, y: 0 });
 
   const [overlayCategories, setOverlayCategories] = useState<Array<'lightleaks' | 'bokeh' | 'textures' | 'paper'>>(['lightleaks']);
@@ -124,6 +125,8 @@ export function useFilmLabState() {
   const panRef = useRef<{ startX: number; startY: number; startOffset: { x: number; y: number } } | null>(null);
   const pointerPositionsRef = useRef<Map<number, { x: number; y: number }>>(new Map());
   const offsetRef = useRef({ x: 0, y: 0 });
+  const pendingOffsetRef = useRef<{ x: number; y: number } | null>(null);
+  const rafRef = useRef<number | null>(null);
   const processTimeoutRef = useRef<ReturnType<typeof setTimeout> | null>(null);
   const processedCanvasRef = useRef<HTMLCanvasElement | null>(null);
   const latestPreviewRequestRef = useRef(0);
@@ -958,7 +961,8 @@ export function useFilmLabState() {
     };
 
     const onPointerDown = (e: PointerEvent) => {
-      if (e.pointerType !== 'touch') return;
+      if (e.pointerType !== 'touch' && e.pointerType !== 'mouse') return;
+      if (e.pointerType === 'mouse' && e.button !== 0) return;
       e.preventDefault();
       if (typeof (e.target as HTMLElement)?.setPointerCapture === 'function') {
         try {
@@ -978,13 +982,38 @@ export function useFilmLabState() {
         const positions = Array.from(pointerPositionsRef.current.values());
         pinchRef.current = {
           startDistance: getDistance(positions[0], positions[1]),
-          startZoom: zoom,
+          startZoom: zoomRef.current,
         };
       }
     };
 
+    const scheduleOffsetUpdate = (nextOffset: { x: number; y: number }) => {
+      offsetRef.current = nextOffset;
+      pendingOffsetRef.current = nextOffset;
+      if (rafRef.current === null) {
+        rafRef.current = window.requestAnimationFrame(() => {
+          rafRef.current = null;
+          if (pendingOffsetRef.current) {
+            setOffset(pendingOffsetRef.current);
+            pendingOffsetRef.current = null;
+          }
+        });
+      }
+    };
+
+    const flushOffsetUpdate = () => {
+      if (rafRef.current !== null) {
+        window.cancelAnimationFrame(rafRef.current);
+        rafRef.current = null;
+      }
+      if (pendingOffsetRef.current) {
+        setOffset(pendingOffsetRef.current);
+        pendingOffsetRef.current = null;
+      }
+    };
+
     const onPointerMove = (e: PointerEvent) => {
-      if (e.pointerType !== 'touch' || !pointerPositionsRef.current.has(e.pointerId)) return;
+      if ((e.pointerType !== 'touch' && e.pointerType !== 'mouse') || !pointerPositionsRef.current.has(e.pointerId)) return;
       pointerPositionsRef.current.set(e.pointerId, { x: e.clientX, y: e.clientY });
       if (pointerPositionsRef.current.size === 2 && pinchRef.current) {
         e.preventDefault();
@@ -998,15 +1027,15 @@ export function useFilmLabState() {
         e.preventDefault();
         const dx = e.clientX - panRef.current.startX;
         const dy = e.clientY - panRef.current.startY;
-        setOffset({
-          x: panRef.current.startOffset.x + dx / zoom,
-          y: panRef.current.startOffset.y + dy / zoom,
+        scheduleOffsetUpdate({
+          x: panRef.current.startOffset.x + dx / zoomRef.current,
+          y: panRef.current.startOffset.y + dy / zoomRef.current,
         });
       }
     };
 
     const endPinch = (e: PointerEvent) => {
-      if (e.pointerType !== 'touch') return;
+      if (e.pointerType !== 'touch' && e.pointerType !== 'mouse') return;
       if (typeof (e.target as HTMLElement)?.releasePointerCapture === 'function') {
         try {
           (e.target as HTMLElement).releasePointerCapture(e.pointerId);
@@ -1018,6 +1047,7 @@ export function useFilmLabState() {
       }
       if (pointerPositionsRef.current.size === 0) {
         panRef.current = null;
+        flushOffsetUpdate();
       }
     };
 
@@ -1035,13 +1065,20 @@ export function useFilmLabState() {
       el.removeEventListener('pointercancel', endPinch);
       pointerPositionsRef.current.clear();
       pinchRef.current = null;
+      if (rafRef.current !== null) {
+        window.cancelAnimationFrame(rafRef.current);
+      }
     };
-  }, [image, zoom]);
+  }, [image]);
 
   useEffect(() => {
     setZoom(1);
     setOffset({ x: 0, y: 0 });
   }, [image]);
+
+  useEffect(() => {
+    zoomRef.current = zoom;
+  }, [zoom]);
 
   useEffect(() => {
     offsetRef.current = offset;

@@ -338,8 +338,9 @@ export default function AppLayout() {
       };
   const wrapperTransformStyle = (zoom !== 1 || offset.x !== 0 || offset.y !== 0)
     ? {
-        transform: `translate(${offset.x}px, ${offset.y}px) scale(${zoom})`,
+        transform: `translate3d(${offset.x}px, ${offset.y}px, 0) scale(${zoom})`,
         transformOrigin: 'center center',
+        willChange: 'transform',
       }
     : undefined;
 
@@ -1406,9 +1407,6 @@ export default function AppLayout() {
           ) : (
             <div
               className="relative flex items-center justify-center w-full h-full"
-              onMouseDown={() => setShowOriginal(true)}
-              onMouseUp={() => setShowOriginal(false)}
-              onMouseLeave={() => setShowOriginal(false)}
               onTouchStart={handleMultiTouchStart}
               onTouchMove={handleMultiTouchMove}
               onTouchEnd={handleMultiTouchEnd}
