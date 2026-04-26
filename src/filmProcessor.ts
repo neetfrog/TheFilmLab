@@ -386,7 +386,8 @@ export function processImage(
       seed: grainSeed ?? Math.floor(Math.random() * 100000),
       monochrome: isBW ? true : undefined,
     });
-    applyGrain(output, grR, grG, grB, 1.0);
+    // Scale grain strength so 100% slider value corresponds to the previous 40% effect.
+    applyGrain(output, grR, grG, grB, 0.4);
   }
 
   // 12. Lens distortion (barrel/pincushion)

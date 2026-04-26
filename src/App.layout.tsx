@@ -659,13 +659,18 @@ export default function AppLayout() {
                 <button
                   type="button"
                   onClick={() => {
-                    setCurvePointsR(selectedPreset.curves.r.map(([x, y]) => [x, y]));
-                    setCurvePointsG(selectedPreset.curves.g.map(([x, y]) => [x, y]));
-                    setCurvePointsB(selectedPreset.curves.b.map(([x, y]) => [x, y]));
-                    setCurvePointsMaster(selectedPreset.curves.r.map(([x, y], index) => [
+                    const baseR = selectedPreset.curves.r.map(([x, y]) => [x, y] as [number, number]);
+                    const baseG = selectedPreset.curves.g.map(([x, y]) => [x, y] as [number, number]);
+                    const baseB = selectedPreset.curves.b.map(([x, y]) => [x, y] as [number, number]);
+
+                    setCurvePointsR(baseR);
+                    setCurvePointsG(baseG);
+                    setCurvePointsB(baseB);
+                    setCurvePointsMaster(baseR.map(([x, y], index) => [
                       x,
-                      (y + selectedPreset.curves.g[index][1] + selectedPreset.curves.b[index][1]) / 3,
+                      (y + baseG[index][1] + baseB[index][1]) / 3,
                     ] as [number, number]));
+                    setCurveChannel('master');
                   }}
                   className="text-[10px] uppercase tracking-[0.2em] text-zinc-500 hover:text-amber-400 transition-colors"
                 >
