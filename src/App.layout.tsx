@@ -423,8 +423,8 @@ export default function AppLayout() {
         </div>
       </header>
 
-      <div className="flex flex-1 overflow-hidden">
-        <aside className={`${sidebarOpen ? 'w-[310px] min-w-[310px]' : 'w-0 min-w-0'} md:w-[310px] md:min-w-[310px] border-r border-zinc-800/50 bg-zinc-900/40 flex flex-col overflow-hidden transition-all duration-200 ${sidebarOpen ? 'md:relative fixed md:static top-16 left-0 right-auto bottom-0 z-40' : ''}`}>
+      <div className="flex flex-1 overflow-hidden min-h-0">
+        <aside className={`${sidebarOpen ? 'w-[310px] min-w-[310px]' : 'w-0 min-w-0'} md:w-[310px] md:min-w-[310px] border-r border-zinc-800/50 bg-zinc-900/40 flex flex-col min-h-0 overflow-y-auto transition-all duration-200 ${sidebarOpen ? 'md:relative fixed md:static top-16 left-0 right-auto bottom-0 z-40' : ''}`}>
           <div className="md:hidden px-3 pt-3 pb-2 border-b border-zinc-800/40 bg-zinc-900/40 backdrop-blur-sm">
             <div className="flex items-center gap-2">
               <img src={logo} alt="FilmLab logo" className="w-8 h-8 object-contain" />
