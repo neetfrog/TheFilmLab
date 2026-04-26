@@ -166,6 +166,8 @@ export interface ProcessingParams {
   colorShiftXOverride?: number;
   colorShiftYOverride?: number;
   whiteBalanceOverride?: number;
+  crossProcessOverride?: number;
+  pushPullOverride?: number;
   levelsInputBlackOverride?: number;
   levelsInputWhiteOverride?: number;
   levelsGammaOverride?: number;
@@ -228,6 +230,8 @@ export function processImage(
   const colorShiftX = params.colorShiftXOverride ?? preset.colorShiftX;
   const colorShiftY = params.colorShiftYOverride ?? preset.colorShiftY;
   const whiteBalance = params.whiteBalanceOverride ?? preset.whiteBalance;
+  const crossProcess = params.crossProcessOverride ?? 0;
+  const pushPull = params.pushPullOverride ?? 0;
   const levelsInputBlack = params.levelsInputBlackOverride ?? preset.levelsInputBlack ?? 0;
   const levelsInputWhite = params.levelsInputWhiteOverride ?? preset.levelsInputWhite ?? 1;
   const levelsGamma = params.levelsGammaOverride ?? preset.levelsGamma ?? 1;
@@ -303,7 +307,15 @@ export function processImage(
     g = contrastLUT[g];
     b = contrastLUT[b];
 
-    // 6. Color cast (split toning by luminance)
+    // 6. Push/pull tonal response
+    if (pushPull !== 0) {
+      const factor = 1 + pushPull * 0.4;
+      r = Math.max(0, Math.min(255, 128 + (r - 128) * factor));
+      g = Math.max(0, Math.min(255, 128 + (g - 128) * factor));
+      b = Math.max(0, Math.min(255, 128 + (b - 128) * factor));
+    }
+
+    // 7. Color cast (split toning by luminance)
     const lum = r * 0.299 + g * 0.587 + b * 0.114;
     const lumNorm = lum / 255;
 
@@ -311,6 +323,13 @@ export function processImage(
     const shadowWeight = Math.max(0, 1 - lumNorm * 2.5);
     const midWeight = Math.sin(lumNorm * Math.PI);
     const highWeight = Math.max(0, lumNorm * 2 - 1);
+
+    if (crossProcess !== 0) {
+      const shift = crossProcess * 0.8;
+      r = Math.max(0, Math.min(255, r + shift * (highWeight * 18 - shadowWeight * 6)));
+      g = Math.max(0, Math.min(255, g - shift * (highWeight * 8 - shadowWeight * 24)));
+      b = Math.max(0, Math.min(255, b + shift * (highWeight * 12 - shadowWeight * 4)));
+    }
 
     r = Math.max(0, Math.min(255,
       r + shadowsTint[0] * shadowWeight +

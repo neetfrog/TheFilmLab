@@ -36,6 +36,8 @@ export interface FilmPreset {
   colorShiftX: number;    // -1 to 1 (cyan to red)
   colorShiftY: number;    // -1 to 1 (blue to yellow)
   whiteBalance: number;   // -1 to 1 (cool/blue to warm/amber)
+  crossProcess?: number;   // -1 to 1 (green to magenta shift)
+  pushPull?: number;       // -1 to 1 (pull to push tonal response)
   levelsInputBlack?: number;  // 0 to 1
   levelsInputWhite?: number;  // 0 to 1
   levelsGamma?: number;       // >0

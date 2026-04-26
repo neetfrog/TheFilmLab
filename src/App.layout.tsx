@@ -131,6 +131,8 @@ export default function AppLayout() {
     setContrastAmount,
     setSaturationAmount,
     setBrightnessAmount,
+    setCrossProcessAmount,
+    setPushPullAmount,
     setFadedBlacks,
     setExposure,
     setPurpleFringing,
@@ -188,7 +190,7 @@ export default function AppLayout() {
     }
   };
 
-  const overlayCategoryOptions = ['lightleaks', 'bokeh', 'textures'] as const;
+  const overlayCategoryOptions = ['lightleaks', 'bokeh', 'textures', 'paper'] as const;
   const overlayCategorySet = new Set(overlayCategories);
   const toggleOverlayCategory = (category: typeof overlayCategoryOptions[number]) => {
     setOverlayCategories((prev) => {
@@ -197,13 +199,15 @@ export default function AppLayout() {
     });
   };
 
-  const overlayItems = useMemo(() => overlayCategories.flatMap((category) => (
-    OVERLAYS[category].thumbs.map((thumb, i) => ({
+  const overlayItems = useMemo(() => overlayCategories.flatMap((category) => {
+    const urls = OVERLAYS[category].urls;
+    const thumbs = OVERLAYS[category].thumbs;
+    return urls.map((url, i) => ({
       category,
-      thumb,
-      url: OVERLAYS[category].urls[i],
-    }))
-  )), [overlayCategories]);
+      thumb: thumbs[i] ?? url,
+      url,
+    }));
+  }), [overlayCategories]);
 
   return (
     <div className="h-screen bg-zinc-950 text-zinc-100 flex flex-col overflow-hidden">
@@ -524,6 +528,10 @@ export default function AppLayout() {
                   defaultValue={selectedPreset.contrast} onChange={setContrastAmount} format={(v) => `${v > 0 ? '+' : ''}${(v * 100).toFixed(0)}`} icon={<ContrastIcon />} />
                 <SliderControl label="Brightness" value={eff.brightness} min={-0.3} max={0.3} step={0.01}
                   defaultValue={selectedPreset.brightness} onChange={setBrightnessAmount} format={(v) => `${v > 0 ? '+' : ''}${(v * 100).toFixed(0)}`} icon={<BrightnessIcon />} />
+                <SliderControl label="Cross Process" value={eff.crossProcess} min={-1} max={1} step={0.05}
+                  defaultValue={selectedPreset.crossProcess ?? 0} onChange={setCrossProcessAmount} format={(v) => v > 0 ? `+${(v * 100).toFixed(0)}% Magenta` : v < 0 ? `${(v * 100).toFixed(0)}% Green` : 'Neutral'} icon={<ColorShiftIcon />} />
+                <SliderControl label="Push / Pull" value={eff.pushPull} min={-1} max={1} step={0.01}
+                  defaultValue={selectedPreset.pushPull ?? 0} onChange={setPushPullAmount} format={(v) => v > 0 ? `Push +${(v * 100).toFixed(0)}%` : v < 0 ? `Pull ${Math.abs(Math.round(v * 100))}%` : 'Neutral'} icon={<ContrastIcon />} />
               </div>
               <div className="px-3 pb-2 space-y-1.5">
                 <SliderControl label="Saturation" value={eff.saturation} min={0} max={2} step={0.01}

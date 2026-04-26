@@ -59,7 +59,7 @@ export function useFilmLabState() {
   const [framingToolOpen, setFramingToolOpen] = useState(false);
   const [zoom, setZoom] = useState(1);
 
-  const [overlayCategories, setOverlayCategories] = useState<Array<'lightleaks' | 'bokeh' | 'textures'>>(['lightleaks']);
+  const [overlayCategories, setOverlayCategories] = useState<Array<'lightleaks' | 'bokeh' | 'textures' | 'paper'>>(['lightleaks']);
   const [selectedOverlays, setSelectedOverlays] = useState<string[]>([]);
   const [overlayOpacity, setOverlayOpacity] = useState(0.6);
   const [overlayBlend, setOverlayBlend] = useState<'screen' | 'multiply' | 'overlay' | 'soft-light' | 'normal'>('screen');
@@ -83,6 +83,8 @@ export function useFilmLabState() {
   const [colorShiftX, setColorShiftX] = useState<number | null>(null);
   const [colorShiftY, setColorShiftY] = useState<number | null>(null);
   const [whiteBalance, setWhiteBalance] = useState<number | null>(null);
+  const [crossProcessAmount, setCrossProcessAmount] = useState<number | null>(null);
+  const [pushPullAmount, setPushPullAmount] = useState<number | null>(null);
   const [levelsInputBlack, setLevelsInputBlack] = useState<number | null>(null);
   const [levelsInputWhite, setLevelsInputWhite] = useState<number | null>(null);
   const [levelsGamma, setLevelsGamma] = useState<number | null>(null);
@@ -120,6 +122,8 @@ export function useFilmLabState() {
     setColorShiftX(null);
     setColorShiftY(null);
     setWhiteBalance(null);
+    setCrossProcessAmount(null);
+    setPushPullAmount(null);
     setLevelsInputBlack(null);
     setLevelsInputWhite(null);
     setLevelsGamma(null);
@@ -153,7 +157,9 @@ export function useFilmLabState() {
     levelsGammaOverride: levelsGamma ?? undefined,
     levelsOutputBlackOverride: levelsOutputBlack ?? undefined,
     levelsOutputWhiteOverride: levelsOutputWhite ?? undefined,
-  }), [grainAmount, grainSize, grainRoughness, vignetteAmount, halationAmount, contrastAmount, saturationAmount, brightnessAmount, fadedBlacks, exposure, purpleFringing, lensDistortion, colorShiftX, colorShiftY, whiteBalance, levelsInputBlack, levelsInputWhite, levelsGamma, levelsOutputBlack, levelsOutputWhite]);
+    crossProcessOverride: crossProcessAmount ?? undefined,
+    pushPullOverride: pushPullAmount ?? undefined,
+  }), [grainAmount, grainSize, grainRoughness, vignetteAmount, halationAmount, contrastAmount, saturationAmount, brightnessAmount, fadedBlacks, exposure, purpleFringing, lensDistortion, colorShiftX, colorShiftY, whiteBalance, crossProcessAmount, pushPullAmount, levelsInputBlack, levelsInputWhite, levelsGamma, levelsOutputBlack, levelsOutputWhite]);
 
   const frameBackground = frameColor === 'white' ? '#ffffff' : frameColor === 'black' ? '#000000' : 'transparent';
   const framePadding = frameColor !== 'none' ? `${frameThickness}%` : '0';
@@ -309,12 +315,14 @@ export function useFilmLabState() {
     colorShiftX,
     colorShiftY,
     whiteBalance,
+    crossProcessAmount,
+    pushPullAmount,
     levelsInputBlack,
     levelsInputWhite,
     levelsGamma,
     levelsOutputBlack,
     levelsOutputWhite,
-  }), [selectedPreset, frameColor, frameThickness, selectedOverlays, overlayOpacity, overlayBlend, selectedFrame, grainAmount, grainSize, grainRoughness, vignetteAmount, halationAmount, contrastAmount, saturationAmount, brightnessAmount, fadedBlacks, exposure, purpleFringing, lensDistortion, colorShiftX, colorShiftY, whiteBalance, levelsInputBlack, levelsInputWhite, levelsGamma, levelsOutputBlack, levelsOutputWhite]);
+  }), [selectedPreset, frameColor, frameThickness, selectedOverlays, overlayOpacity, overlayBlend, selectedFrame, grainAmount, grainSize, grainRoughness, vignetteAmount, halationAmount, contrastAmount, saturationAmount, brightnessAmount, fadedBlacks, exposure, purpleFringing, lensDistortion, colorShiftX, colorShiftY, whiteBalance, crossProcessAmount, pushPullAmount, levelsInputBlack, levelsInputWhite, levelsGamma, levelsOutputBlack, levelsOutputWhite]);
 
   const addBatchEntry = useCallback((entry: BatchImage) => {
     setBatchImages((prev) => {
@@ -534,6 +542,8 @@ export function useFilmLabState() {
       colorShiftX,
       colorShiftY,
       whiteBalance,
+      crossProcessAmount,
+      pushPullAmount,
       levelsInputBlack,
       levelsInputWhite,
       levelsGamma,
@@ -548,7 +558,7 @@ export function useFilmLabState() {
       rotation,
       activeBatchIndex,
     };
-  }, [imageData, selectedPreset, grainAmount, grainSize, grainRoughness, vignetteAmount, halationAmount, contrastAmount, saturationAmount, brightnessAmount, fadedBlacks, exposure, purpleFringing, lensDistortion, colorShiftX, colorShiftY, whiteBalance, levelsInputBlack, levelsInputWhite, levelsGamma, levelsOutputBlack, levelsOutputWhite, frameColor, frameThickness, selectedOverlays, overlayOpacity, overlayBlend, selectedFrame, rotation, activeBatchIndex]);
+  }, [imageData, selectedPreset, grainAmount, grainSize, grainRoughness, vignetteAmount, halationAmount, contrastAmount, saturationAmount, brightnessAmount, fadedBlacks, exposure, purpleFringing, lensDistortion, colorShiftX, colorShiftY, whiteBalance, crossProcessAmount, pushPullAmount, levelsInputBlack, levelsInputWhite, levelsGamma, levelsOutputBlack, levelsOutputWhite, frameColor, frameThickness, selectedOverlays, overlayOpacity, overlayBlend, selectedFrame, rotation, activeBatchIndex]);
 
   const restoreSnapshot = useCallback((snapshot: HistoryEntry) => {
     setImageData(snapshot.imageData);
@@ -570,6 +580,8 @@ export function useFilmLabState() {
     setColorShiftX(snapshot.colorShiftX);
     setColorShiftY(snapshot.colorShiftY);
     setWhiteBalance(snapshot.whiteBalance);
+    setCrossProcessAmount(snapshot.crossProcessAmount);
+    setPushPullAmount(snapshot.pushPullAmount);
     setLevelsInputBlack(snapshot.levelsInputBlack);
     setLevelsInputWhite(snapshot.levelsInputWhite);
     setLevelsGamma(snapshot.levelsGamma);
@@ -993,6 +1005,8 @@ export function useFilmLabState() {
     setColorShiftX(null);
     setColorShiftY(null);
     setWhiteBalance(null);
+    setCrossProcessAmount(null);
+    setPushPullAmount(null);
     setLevelsInputBlack(null);
     setLevelsInputWhite(null);
     setLevelsGamma(null);
@@ -1070,12 +1084,14 @@ export function useFilmLabState() {
     colorShiftX: colorShiftX ?? selectedPreset.colorShiftX,
     colorShiftY: colorShiftY ?? selectedPreset.colorShiftY,
     whiteBalance: whiteBalance ?? selectedPreset.whiteBalance,
+    crossProcess: crossProcessAmount ?? selectedPreset.crossProcess ?? 0,
+    pushPull: pushPullAmount ?? selectedPreset.pushPull ?? 0,
     levelsInputBlack: levelsInputBlack ?? selectedPreset.levelsInputBlack ?? 0,
     levelsInputWhite: levelsInputWhite ?? selectedPreset.levelsInputWhite ?? 1,
     levelsGamma: levelsGamma ?? selectedPreset.levelsGamma ?? 1,
     levelsOutputBlack: levelsOutputBlack ?? selectedPreset.levelsOutputBlack ?? 0,
     levelsOutputWhite: levelsOutputWhite ?? selectedPreset.levelsOutputWhite ?? 1,
-  }), [grainAmount, grainSize, grainRoughness, vignetteAmount, halationAmount, contrastAmount, saturationAmount, brightnessAmount, fadedBlacks, purpleFringing, lensDistortion, colorShiftX, colorShiftY, whiteBalance, levelsInputBlack, levelsInputWhite, levelsGamma, levelsOutputBlack, levelsOutputWhite, selectedPreset]);
+  }), [grainAmount, grainSize, grainRoughness, vignetteAmount, halationAmount, contrastAmount, saturationAmount, brightnessAmount, fadedBlacks, purpleFringing, lensDistortion, colorShiftX, colorShiftY, whiteBalance, crossProcessAmount, pushPullAmount, levelsInputBlack, levelsInputWhite, levelsGamma, levelsOutputBlack, levelsOutputWhite, selectedPreset]);
 
   const levelsHistogram = useMemo(() => {
     if (!imageData) return null;
@@ -1141,9 +1157,9 @@ export function useFilmLabState() {
     grainAmount !== null || grainSize !== null || grainRoughness !== null ||
     vignetteAmount !== null || halationAmount !== null || contrastAmount !== null ||
     saturationAmount !== null || brightnessAmount !== null || fadedBlacks !== null || exposure !== 0 ||
-    purpleFringing !== null || lensDistortion !== null || colorShiftX !== null || colorShiftY !== null || whiteBalance !== null ||
+    purpleFringing !== null || lensDistortion !== null || colorShiftX !== null || colorShiftY !== null || whiteBalance !== null || crossProcessAmount !== null || pushPullAmount !== null ||
     levelsInputBlack !== null || levelsInputWhite !== null || levelsGamma !== null || levelsOutputBlack !== null || levelsOutputWhite !== null
-  ), [grainAmount, grainSize, grainRoughness, vignetteAmount, halationAmount, contrastAmount, saturationAmount, brightnessAmount, fadedBlacks, exposure, purpleFringing, lensDistortion, colorShiftX, colorShiftY, whiteBalance, levelsInputBlack, levelsInputWhite, levelsGamma, levelsOutputBlack, levelsOutputWhite]);
+), [grainAmount, grainSize, grainRoughness, vignetteAmount, halationAmount, contrastAmount, saturationAmount, brightnessAmount, fadedBlacks, exposure, purpleFringing, lensDistortion, colorShiftX, colorShiftY, whiteBalance, crossProcessAmount, pushPullAmount, levelsInputBlack, levelsInputWhite, levelsGamma, levelsOutputBlack, levelsOutputWhite]);
 
   const handleSplitMove = useCallback((clientX: number) => {
     if (!draggingSplit || !splitContainerRef.current) return;
@@ -1204,6 +1220,8 @@ export function useFilmLabState() {
     colorShiftX,
     colorShiftY,
     whiteBalance,
+    crossProcessAmount,
+    pushPullAmount,
     levelsInputBlack,
     levelsInputWhite,
     levelsGamma,
@@ -1266,6 +1284,8 @@ export function useFilmLabState() {
     setColorShiftX,
     setColorShiftY,
     setWhiteBalance,
+    setCrossProcessAmount,
+    setPushPullAmount,
     setLevelsInputBlack,
     setLevelsInputWhite,
     setLevelsGamma,

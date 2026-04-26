@@ -29,6 +29,8 @@ export interface BatchImageEditState {
   colorShiftX: number | null;
   colorShiftY: number | null;
   whiteBalance: number | null;
+  crossProcessAmount: number | null;
+  pushPullAmount: number | null;
   levelsInputBlack: number | null;
   levelsInputWhite: number | null;
   levelsGamma: number | null;
@@ -73,6 +75,8 @@ export interface HistoryEntry {
   colorShiftX: number | null;
   colorShiftY: number | null;
   whiteBalance: number | null;
+  crossProcessAmount: number | null;
+  pushPullAmount: number | null;
   levelsInputBlack: number | null;
   levelsInputWhite: number | null;
   levelsGamma: number | null;

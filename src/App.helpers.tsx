@@ -1,7 +1,7 @@
 import type { ReactNode } from 'react';
 
 export type BlendMode = 'screen' | 'multiply' | 'overlay' | 'soft-light' | 'normal';
-export type OverlayCategory = 'lightleaks' | 'bokeh' | 'textures';
+export type OverlayCategory = 'lightleaks' | 'bokeh' | 'textures' | 'paper';
 export type FilmType = 'all' | 'color-negative' | 'bw-negative' | 'slide' | 'cinema';
 
 export const PRESET_STORAGE_KEY = 'filmLabCustomPresets';
@@ -335,6 +335,12 @@ export const OVERLAYS: Record<OverlayCategory, { label: string; urls: string[]; 
     urls: Object.values(import.meta.glob('./overlays/texture*.webp', { query: '?url', import: 'default', eager: true }) as Record<string, string>).sort(),
     thumbs: Object.values(import.meta.glob('./overlays/thumbs/texture*.webp', { query: '?url', import: 'default', eager: true }) as Record<string, string>).sort(),
     defaultBlend: 'screen',
+  },
+  paper: {
+    label: 'Paper',
+    urls: Object.values(import.meta.glob('./overlays/paper*.webp', { query: '?url', import: 'default', eager: true }) as Record<string, string>).sort(),
+    thumbs: Object.values(import.meta.glob('./overlays/thumbs/paper*.webp', { query: '?url', import: 'default', eager: true }) as Record<string, string>).sort(),
+    defaultBlend: 'overlay',
   },
 };
 
