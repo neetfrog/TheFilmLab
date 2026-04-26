@@ -1246,7 +1246,7 @@ export default function AppLayout() {
           ref={mainAreaRef}
           className="flex-1 flex items-center justify-center bg-zinc-950 relative overflow-visible"
           style={{
-            touchAction: 'pan-y',
+            touchAction: 'none',
             ...(isMobile
               ? {
                   paddingTop: '48px',

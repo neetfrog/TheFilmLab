@@ -955,6 +955,12 @@ export function useFilmLabState() {
 
     const onPointerDown = (e: PointerEvent) => {
       if (e.pointerType !== 'touch') return;
+      e.preventDefault();
+      if (typeof (e.target as HTMLElement)?.setPointerCapture === 'function') {
+        try {
+          (e.target as HTMLElement).setPointerCapture(e.pointerId);
+        } catch {}
+      }
       pointerPositionsRef.current.set(e.pointerId, { x: e.clientX, y: e.clientY });
       if (pointerPositionsRef.current.size === 2) {
         const positions = Array.from(pointerPositionsRef.current.values());
@@ -979,6 +985,11 @@ export function useFilmLabState() {
 
     const endPinch = (e: PointerEvent) => {
       if (e.pointerType !== 'touch') return;
+      if (typeof (e.target as HTMLElement)?.releasePointerCapture === 'function') {
+        try {
+          (e.target as HTMLElement).releasePointerCapture(e.pointerId);
+        } catch {}
+      }
       pointerPositionsRef.current.delete(e.pointerId);
       if (pointerPositionsRef.current.size < 2) {
         pinchRef.current = null;
