@@ -1,5 +1,6 @@
 import { useMemo } from 'react';
 import type { FrameColor, CropRatio } from './App.types';
+import type { OverlayCategory } from './App.helpers';
 import FramingTool from './FramingTool';
 import logo from './favicon/logo.png';
 import SectionHeader from './components/SectionHeader';
@@ -81,8 +82,8 @@ export default function AppLayout() {
     zoom,
     overlayCategories,
     selectedOverlays,
-    overlayOpacity,
-    overlayBlend,
+    overlayOpacityByCategory,
+    overlayBlendByCategory,
     selectedFrame,
     frameAspectRatio,
     rotation,
@@ -120,8 +121,8 @@ export default function AppLayout() {
     setFrameThickness,
     setOverlayCategories,
     setSelectedOverlays,
-    setOverlayOpacity,
-    setOverlayBlend,
+    setOverlayOpacityByCategory,
+    setOverlayBlendByCategory,
     setSelectedFrame,
     setGrainAmount,
     setGrainSize,
@@ -153,7 +154,6 @@ export default function AppLayout() {
     frameBackground,
     framePadding,
     displayedPresets,
-    activeOverlayBlend,
     currentPresetIndex,
     hasOverrides,
     eff,
@@ -192,11 +192,27 @@ export default function AppLayout() {
 
   const overlayCategoryOptions = ['lightleaks', 'bokeh', 'textures', 'paper'] as const;
   const overlayCategorySet = new Set(overlayCategories);
-  const toggleOverlayCategory = (category: typeof overlayCategoryOptions[number]) => {
-    setOverlayCategories((prev) => {
-      const next = prev.includes(category) ? prev.filter((item) => item !== category) : [...prev, category];
-      return next.length > 0 ? next : ['lightleaks'];
+  const activeOverlayCategory = overlayCategories[0] ?? 'lightleaks';
+  const overlayUrlCategoryMap = useMemo(() => {
+    const map = new Map<string, OverlayCategory>();
+    overlayCategoryOptions.forEach((category) => {
+      OVERLAYS[category].urls.forEach((url) => map.set(url, category));
     });
+    return map;
+  }, [overlayCategoryOptions]);
+
+  const getOverlayBlendMode = (url: string) => {
+    const category = overlayUrlCategoryMap.get(url) ?? activeOverlayCategory;
+    return overlayBlendByCategory[category];
+  };
+
+  const getOverlayOpacity = (url: string) => {
+    const category = overlayUrlCategoryMap.get(url) ?? activeOverlayCategory;
+    return overlayOpacityByCategory[category];
+  };
+
+  const toggleOverlayCategory = (category: typeof overlayCategoryOptions[number]) => {
+    setOverlayCategories([category]);
   };
 
   const overlayItems = useMemo(() => overlayCategories.flatMap((category) => {
@@ -628,7 +644,10 @@ export default function AppLayout() {
                             }
                             return [...prev, url];
                           });
-                          if (!isSelected) setOverlayBlend(OVERLAYS[category].defaultBlend);
+                          if (!isSelected) setOverlayBlendByCategory((prev) => ({
+                            ...prev,
+                            [category]: OVERLAYS[category].defaultBlend,
+                          }));
                         }}
                         className={`aspect-square rounded overflow-hidden transition-all border ${
                           isSelected
@@ -645,19 +664,25 @@ export default function AppLayout() {
                   <div className="mt-2 space-y-1.5">
                     <SliderControl
                       label="Opacity"
-                      value={overlayOpacity}
+                      value={overlayOpacityByCategory[activeOverlayCategory]}
                       min={0} max={1} step={0.01}
-                      defaultValue={0.6}
-                      onChange={(v) => setOverlayOpacity(v ?? 0.6)}
+                      defaultValue={OVERLAYS[activeOverlayCategory].defaultOpacity}
+                      onChange={(v) => setOverlayOpacityByCategory((prev) => ({
+                        ...prev,
+                        [activeOverlayCategory]: v ?? OVERLAYS[activeOverlayCategory].defaultOpacity,
+                      }))}
                       format={(v) => `${Math.round(v * 100)}%`}
                     />
                     <div className="flex flex-wrap gap-1">
                       {BLEND_MODES.map((mode) => (
                         <button
                           key={mode.value}
-                          onClick={() => setOverlayBlend(mode.value)}
+                          onClick={() => setOverlayBlendByCategory((prev) => ({
+                            ...prev,
+                            [activeOverlayCategory]: mode.value,
+                          }))}
                           className={`px-1.5 py-0.5 rounded text-[9px] font-medium transition-all ${
-                            overlayBlend === mode.value
+                            overlayBlendByCategory[activeOverlayCategory] === mode.value
                               ? 'bg-amber-500 text-black'
                               : 'bg-zinc-800 text-zinc-400 hover:text-zinc-200'
                           }`}
@@ -943,7 +968,7 @@ export default function AppLayout() {
                 <div className="absolute top-2 left-2 bg-black/60 text-white/80 text-[10px] font-medium px-2 py-0.5 rounded-md backdrop-blur-sm">Original</div>
                 <div className="absolute top-2 right-2 bg-black/60 text-white/80 text-[10px] font-medium px-2 py-0.5 rounded-md backdrop-blur-sm">{selectedPreset.name}</div>
                 {selectedOverlays.length > 0 && (
-                  <div className="absolute inset-0 overflow-hidden pointer-events-none" style={{ clipPath: `inset(0 0 0 ${splitPos}%)`, mixBlendMode: activeOverlayBlend }}>
+                  <div className="absolute inset-0 overflow-hidden pointer-events-none" style={{ clipPath: `inset(0 0 0 ${splitPos}%)` }}>
                     {selectedOverlays.map((overlayUrl) => (
                       <img
                         key={overlayUrl}
@@ -956,8 +981,8 @@ export default function AppLayout() {
                           width: '100%',
                           height: '100%',
                           objectFit: 'cover',
-                          opacity: overlayOpacity,
-                          mixBlendMode: activeOverlayBlend,
+                          opacity: getOverlayOpacity(overlayUrl),
+                          mixBlendMode: getOverlayBlendMode(overlayUrl),
                           transform: 'translate(-50%, -50%)',
                           transformOrigin: 'center center',
                         }}
@@ -1057,8 +1082,8 @@ export default function AppLayout() {
                         width: '100%',
                         height: '100%',
                         objectFit: 'cover',
-                        opacity: overlayOpacity,
-                        mixBlendMode: activeOverlayBlend,
+                        opacity: getOverlayOpacity(overlayUrl),
+                        mixBlendMode: getOverlayBlendMode(overlayUrl),
                         transform: 'translate(-50%, -50%)',
                         transformOrigin: 'center center',
                       }}

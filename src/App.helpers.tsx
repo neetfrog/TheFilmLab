@@ -317,30 +317,34 @@ export const ChevronRightIcon = () => (
   </svg>
 );
 
-export const OVERLAYS: Record<OverlayCategory, { label: string; urls: string[]; thumbs: string[]; defaultBlend: BlendMode }> = {
+export const OVERLAYS: Record<OverlayCategory, { label: string; urls: string[]; thumbs: string[]; defaultBlend: BlendMode; defaultOpacity: number }> = {
   lightleaks: {
     label: 'Light Leaks',
     urls: Object.values(import.meta.glob('./overlays/lightleak*.webp', { query: '?url', import: 'default', eager: true }) as Record<string, string>).sort(),
     thumbs: Object.values(import.meta.glob('./overlays/thumbs/lightleak*.webp', { query: '?url', import: 'default', eager: true }) as Record<string, string>).sort(),
     defaultBlend: 'screen',
+    defaultOpacity: 0.6,
   },
   bokeh: {
     label: 'Bokeh',
     urls: Object.values(import.meta.glob('./overlays/bokeh*.webp', { query: '?url', import: 'default', eager: true }) as Record<string, string>).sort(),
     thumbs: Object.values(import.meta.glob('./overlays/thumbs/bokeh*.webp', { query: '?url', import: 'default', eager: true }) as Record<string, string>).sort(),
     defaultBlend: 'screen',
+    defaultOpacity: 0.6,
   },
   textures: {
     label: 'Textures',
     urls: Object.values(import.meta.glob('./overlays/texture*.webp', { query: '?url', import: 'default', eager: true }) as Record<string, string>).sort(),
     thumbs: Object.values(import.meta.glob('./overlays/thumbs/texture*.webp', { query: '?url', import: 'default', eager: true }) as Record<string, string>).sort(),
     defaultBlend: 'screen',
+    defaultOpacity: 0.6,
   },
   paper: {
     label: 'Paper',
     urls: Object.values(import.meta.glob('./overlays/paper*.webp', { query: '?url', import: 'default', eager: true }) as Record<string, string>).sort(),
     thumbs: Object.values(import.meta.glob('./overlays/thumbs/paper*.webp', { query: '?url', import: 'default', eager: true }) as Record<string, string>).sort(),
-    defaultBlend: 'overlay',
+    defaultBlend: 'multiply',
+    defaultOpacity: 0.8,
   },
 };
 
