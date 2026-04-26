@@ -126,20 +126,23 @@ function LevelsHistogram({
       updateValue(draggingRef.current.marker, event.clientX);
     };
 
-    const handlePointerUp = () => {
+    const endDrag = () => {
       draggingRef.current.marker = null;
     };
 
     window.addEventListener('pointermove', handlePointerMove);
-    window.addEventListener('pointerup', handlePointerUp);
+    window.addEventListener('pointerup', endDrag);
+    window.addEventListener('pointercancel', endDrag);
     return () => {
       window.removeEventListener('pointermove', handlePointerMove);
-      window.removeEventListener('pointerup', handlePointerUp);
+      window.removeEventListener('pointerup', endDrag);
+      window.removeEventListener('pointercancel', endDrag);
     };
   }, [updateValue]);
 
   const startDrag = (marker: 'inputBlack' | 'inputWhite' | 'gamma') => (event: React.PointerEvent<HTMLDivElement>) => {
     event.preventDefault();
+    event.currentTarget.setPointerCapture(event.pointerId);
     draggingRef.current = {
       marker,
       startX: event.clientX,
@@ -168,7 +171,7 @@ function LevelsHistogram({
               <div
                 key={marker}
                 onPointerDown={startDrag(marker as any)}
-                className="absolute top-0 h-full w-8 -translate-x-1/2 cursor-ew-resize"
+                className="absolute top-0 h-full w-8 -translate-x-1/2 cursor-ew-resize touch-none"
                 style={{ left }}
               >
                 <div className={`${lineColor} absolute left-1/2 top-0 h-full w-1.5 -translate-x-1/2`} />
