@@ -916,19 +916,12 @@ export function useFilmLabState() {
       }
     }
 
-    const normalized = ((rotation % 360) + 360) % 360;
-    const radians = (normalized * Math.PI) / 180;
-    const swap = normalized === 90 || normalized === 270;
     const dstCanvas = document.createElement('canvas');
-    dstCanvas.width = swap ? exportCanvas.height : exportCanvas.width;
-    dstCanvas.height = swap ? exportCanvas.width : exportCanvas.height;
+    dstCanvas.width = exportCanvas.width;
+    dstCanvas.height = exportCanvas.height;
     const ctx = dstCanvas.getContext('2d');
     if (!ctx) return;
-    ctx.save();
-    ctx.translate(dstCanvas.width / 2, dstCanvas.height / 2);
-    ctx.rotate(radians);
-    ctx.drawImage(exportCanvas, -exportCanvas.width / 2, -exportCanvas.height / 2);
-    ctx.restore();
+    ctx.drawImage(exportCanvas, 0, 0);
 
     const link = document.createElement('a');
     link.download = `${selectedPreset.brand}-${selectedPreset.name.replace(/\s+/g, '-')}.jpg`;
