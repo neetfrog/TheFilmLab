@@ -413,8 +413,10 @@ export default function AppLayout() {
                   onMouseDown={() => setShowOriginal(true)}
                   onMouseUp={() => setShowOriginal(false)}
                   onMouseLeave={() => setShowOriginal(false)}
-                  onTouchStart={() => setShowOriginal(true)}
+                  onTouchStart={(e) => e.touches.length === 1 && setShowOriginal(true)}
+                  onTouchMove={(e) => { if (e.touches.length > 1) setShowOriginal(false); }}
                   onTouchEnd={() => setShowOriginal(false)}
+                  onTouchCancel={() => setShowOriginal(false)}
                   className={`px-2.5 py-1.5 rounded-lg text-xs border transition-all select-none flex items-center gap-1.5 flex-shrink-0 ${
                     showOriginal
                       ? 'bg-zinc-700 text-zinc-200 border-zinc-600'
@@ -1349,7 +1351,8 @@ export default function AppLayout() {
               onMouseDown={() => setShowOriginal(true)}
               onMouseUp={() => setShowOriginal(false)}
               onMouseLeave={() => setShowOriginal(false)}
-              onTouchStart={() => setShowOriginal(true)}
+              onTouchStart={(e) => e.touches.length === 1 && setShowOriginal(true)}
+              onTouchMove={(e) => { if (e.touches.length > 1) setShowOriginal(false); }}
               onTouchEnd={() => setShowOriginal(false)}
               onTouchCancel={() => setShowOriginal(false)}
             >
