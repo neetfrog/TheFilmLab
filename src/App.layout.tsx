@@ -1550,9 +1550,12 @@ export default function AppLayout() {
           <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/70 p-4">
             <div className="w-full max-w-lg rounded-xl border border-zinc-800 bg-zinc-950 p-6 text-zinc-100 shadow-xl">
               <div className="flex items-start justify-between gap-4">
-                <div>
-                  <h2 className="text-lg font-bold">About FilmLab</h2>
-                  <p className="mt-2 text-sm text-zinc-400">Quickstart & info</p>
+                <div className="flex items-center gap-3">
+                  <img src={logo} alt="FilmLab logo" className="w-10 h-10 rounded-md object-contain bg-zinc-900 p-1" />
+                  <div>
+                    <h2 className="text-lg font-bold">FilmLab</h2>
+                    <p className="mt-1 text-sm text-zinc-400">Analogue Film Emulation</p>
+                  </div>
                 </div>
                 <button
                   onClick={() => setIsAboutOpen(false)}
