@@ -65,7 +65,6 @@ export default function AppLayout() {
     opticalEffects: false,
     overlays: false,
     frame: false,
-    filmFrame: false,
     cropRotate: false,
     customPreset: false,
   });
@@ -950,7 +949,7 @@ export default function AppLayout() {
                   className="flex items-center gap-3 w-full"
                 >
                   <ChevronRightIcon className={`w-4 h-4 transition-transform ${openSections.frame ? 'rotate-90' : ''}`} />
-                  <SectionHeader title="Basic Frame" icon={<FrameIcon />} />
+                  <SectionHeader title="Frames" icon={<FrameIcon />} />
                 </button>
               </div>
               <div className={`overflow-hidden transition-all duration-200 ease-out origin-top ${openSections.frame ? 'max-h-screen opacity-100 scale-y-100' : 'max-h-0 opacity-0 scale-y-95'}`}>
@@ -982,7 +981,36 @@ export default function AppLayout() {
                     format={(v) => `${Math.round(v)}%`}
                   />
                 )}
-              </div>
+                </div>
+
+                <div className="px-3 pb-3 border-t border-zinc-800/40">
+                  <div className="text-xs font-semibold uppercase tracking-[0.2em] text-zinc-500 mb-2">Film Frames</div>
+                  <div className="grid grid-cols-4 gap-1.5">
+                    <button
+                      onClick={() => setSelectedFrame(null)}
+                      className={`aspect-[3/2] rounded text-[9px] font-bold flex items-center justify-center transition-all border ${
+                        !selectedFrame
+                          ? 'bg-zinc-700 text-zinc-100 border-zinc-600'
+                          : 'bg-zinc-800/50 text-zinc-600 hover:text-zinc-300 border-zinc-700/50 hover:border-zinc-500'
+                      }`}
+                    >
+                      None
+                    </button>
+                    {FRAME_URLS.map((url, i) => (
+                      <button
+                        key={url}
+                        onClick={() => setSelectedFrame(url)}
+                        className={`aspect-[3/2] rounded overflow-hidden transition-all border ${
+                          selectedFrame === url
+                            ? 'border-amber-500 ring-1 ring-amber-500/40'
+                            : 'border-zinc-700/50 hover:border-zinc-500'
+                        }`}
+                      >
+                        <img src={url} className="w-full h-full object-cover opacity-80" alt={`Frame ${i + 1}`} />
+                      </button>
+                    ))}
+                  </div>
+                </div>
               </div>
 
               <div className="px-3 pt-3 pb-2 border-t border-zinc-800/40">
@@ -1092,46 +1120,6 @@ export default function AppLayout() {
                     </div>
                   )}
                 </div>
-              </div>
-
-              <div className="px-3 pt-3 pb-2 border-t border-zinc-800/40">
-                <button
-                  type="button"
-                  onClick={() => toggleSection('filmFrame')}
-                  className="flex items-center gap-3 w-full"
-                >
-                  <ChevronRightIcon className={`w-4 h-4 transition-transform ${openSections.filmFrame ? 'rotate-90' : ''}`} />
-                  <SectionHeader title="Film Frame" icon={<FrameIcon />} />
-                </button>
-              </div>
-              <div className={`overflow-hidden transition-all duration-200 ease-out origin-top ${openSections.filmFrame ? 'max-h-screen opacity-100 scale-y-100' : 'max-h-0 opacity-0 scale-y-95'}`}>
-                <div className="px-3 pb-3">
-                  <div className="grid grid-cols-4 gap-1.5">
-                  <button
-                    onClick={() => setSelectedFrame(null)}
-                    className={`aspect-[3/2] rounded text-[9px] font-bold flex items-center justify-center transition-all border ${
-                      !selectedFrame
-                        ? 'bg-zinc-700 text-zinc-100 border-zinc-600'
-                        : 'bg-zinc-800/50 text-zinc-600 hover:text-zinc-300 border-zinc-700/50 hover:border-zinc-500'
-                    }`}
-                  >
-                    None
-                  </button>
-                  {FRAME_URLS.map((url, i) => (
-                    <button
-                      key={url}
-                      onClick={() => setSelectedFrame(url)}
-                      className={`aspect-[3/2] rounded overflow-hidden transition-all border ${
-                        selectedFrame === url
-                          ? 'border-amber-500 ring-1 ring-amber-500/40'
-                          : 'border-zinc-700/50 hover:border-zinc-500'
-                      }`}
-                    >
-                      <img src={url} className="w-full h-full object-cover opacity-80" alt={`Frame ${i + 1}`} />
-                    </button>
-                  ))}
-                </div>
-              </div>
               </div>
 
               <div className="px-3 pt-3 pb-2 border-t border-zinc-800/40">

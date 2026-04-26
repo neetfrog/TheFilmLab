@@ -218,7 +218,14 @@ export function useFilmLabState() {
   }), [selectedPreset, curvePointsR, curvePointsG, curvePointsB]);
 
   const frameBackground = frameColor === 'white' ? '#ffffff' : frameColor === 'black' ? '#000000' : 'transparent';
-  const framePadding = frameColor !== 'none' ? `${frameThickness}%` : '0';
+  const framePreviewBase = canvasBounds
+    ? Math.max(canvasBounds.width, canvasBounds.height)
+    : imageData
+      ? Math.max(imageData.width, imageData.height)
+      : 0;
+  const framePadding = frameColor !== 'none' && framePreviewBase > 0
+    ? `${Math.round((frameThickness / 100) * framePreviewBase)}px`
+    : '0';
 
   useEffect(() => {
     const worker = new Worker(new URL('./filmWorker.ts', import.meta.url), { type: 'module' });
