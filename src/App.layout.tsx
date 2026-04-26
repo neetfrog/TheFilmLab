@@ -54,6 +54,8 @@ export default function AppLayout() {
   const state = useFilmLabState();
   const [openSections, setOpenSections] = useState({
     tone: true,
+    levels: true,
+    presets: true,
     curves: true,
     filmGrain: true,
     effects: true,
@@ -435,18 +437,27 @@ export default function AppLayout() {
 
           <div className="sticky top-0 z-10 px-3 pt-3 pb-2 border-b border-zinc-800/40 bg-zinc-900/40 backdrop-blur-sm">
             <div className="pb-4 border-b border-zinc-800/30">
-              <SectionHeader title="Levels" icon={<LevelsIcon />} />
-              <div className="mt-2">
-                <LevelsHistogram
-                  histogram={levelsHistogram}
-                  inputBlack={eff.levelsInputBlack}
-                  inputWhite={eff.levelsInputWhite}
-                  gamma={eff.levelsGamma}
-                  onInputBlackChange={setLevelsInputBlack}
-                  onInputWhiteChange={setLevelsInputWhite}
-                  onGammaChange={setLevelsGamma}
-                />
-              </div>
+              <button
+                type="button"
+                onClick={() => toggleSection('levels')}
+                className="flex items-center gap-3"
+              >
+                <ChevronRightIcon className={`w-4 h-4 transition-transform ${openSections.levels ? 'rotate-90' : ''}`} />
+                <SectionHeader title="Levels" icon={<LevelsIcon />} />
+              </button>
+              {openSections.levels && (
+                <div className="mt-2">
+                  <LevelsHistogram
+                    histogram={levelsHistogram}
+                    inputBlack={eff.levelsInputBlack}
+                    inputWhite={eff.levelsInputWhite}
+                    gamma={eff.levelsGamma}
+                    onInputBlackChange={setLevelsInputBlack}
+                    onInputWhiteChange={setLevelsInputWhite}
+                    onGammaChange={setLevelsGamma}
+                  />
+                </div>
+              )}
             </div>
             <div className="mt-3 px-1 space-y-2">
               <div className="flex flex-wrap items-center justify-between gap-2 text-[10px] uppercase tracking-[0.2em] text-zinc-500">
@@ -499,30 +510,35 @@ export default function AppLayout() {
           </div>
 
           <div className="px-3 py-3 border-b border-zinc-800/40 space-y-2">
-            <div className="flex items-center justify-between gap-2">
+            <button
+              type="button"
+              onClick={() => toggleSection('presets')}
+              className="flex items-center gap-3"
+            >
+              <ChevronRightIcon className={`w-4 h-4 transition-transform ${openSections.presets ? 'rotate-90' : ''}`} />
               <div className="text-[10px] uppercase tracking-[0.2em] text-zinc-500">Presets</div>
-            </div>
-            <div className="flex flex-wrap gap-2">
-              {presetCategories.map((category) => {
-                const label = category === 'favorites' ? 'Favorites' : typeLabels[category];
-                const isActive = activeCategory === category;
-                return (
-                  <button
-                    key={category}
-                    type="button"
-                    onClick={() => selectPresetCategory(category)}
-                    className={`px-2.5 py-1 rounded-full text-[10px] uppercase tracking-[0.18em] transition-colors border ${isActive ? 'bg-amber-500 text-black border-amber-500' : 'bg-zinc-900 text-zinc-400 border-zinc-700 hover:bg-zinc-800 hover:text-zinc-100'}`}
-                  >
-                    {label}
-                  </button>
-                );
-              })}
-            </div>
-          </div>
-
-          <div className="flex-1 overflow-y-auto scrollbar-thin">
-            <div className="px-2 py-1.5 space-y-0.5">
-              {displayedPresets.map((preset) => {
+            </button>
+            {openSections.presets && (
+              <>
+                <div className="flex flex-wrap gap-2">
+                  {presetCategories.map((category) => {
+                    const label = category === 'favorites' ? 'Favorites' : typeLabels[category];
+                    const isActive = activeCategory === category;
+                    return (
+                      <button
+                        key={category}
+                        type="button"
+                        onClick={() => selectPresetCategory(category)}
+                        className={`px-2.5 py-1 rounded-full text-[10px] uppercase tracking-[0.18em] transition-colors border ${isActive ? 'bg-amber-500 text-black border-amber-500' : 'bg-zinc-900 text-zinc-400 border-zinc-700 hover:bg-zinc-800 hover:text-zinc-100'}`}
+                      >
+                        {label}
+                      </button>
+                    );
+                  })}
+                </div>
+                <div className="flex-1 overflow-y-auto scrollbar-thin">
+                  <div className="px-2 py-1.5 space-y-0.5">
+                    {displayedPresets.map((preset) => {
                 const isSelected = selectedPreset.id === preset.id;
                 return (
                   <div
@@ -598,8 +614,10 @@ export default function AppLayout() {
                 );
               })}
             </div>
-
-            <div className="border-t border-zinc-800/50">
+          </div>
+        </>
+      )}
+          <div className="border-t border-zinc-800/50">
               <div className="px-3 pt-3 pb-1">
                 <button
                   type="button"
@@ -657,12 +675,6 @@ export default function AppLayout() {
                   />
                 </div>
               )}
-              <div className="px-3 pb-2 space-y-1.5">
-                <SliderControl label="Saturation" value={eff.saturation} min={0} max={2} step={0.01}
-                  defaultValue={selectedPreset.saturation} onChange={setSaturationAmount} format={(v) => `${(v * 100).toFixed(0)}%`} icon={<SaturationIcon />} />
-                <SliderControl label="Faded Blacks" value={eff.fadedBlacks} min={0} max={0.25} step={0.005}
-                  defaultValue={selectedPreset.fadedBlacks} onChange={setFadedBlacks} format={(v) => `${(v * 100).toFixed(0)}%`} icon={<FadedBlacksIcon />} />
-              </div>
 
               <div className="px-3 pt-1 pb-1 flex items-center justify-between">
                 <button
@@ -696,7 +708,7 @@ export default function AppLayout() {
                 <button
                   type="button"
                   onClick={() => toggleSection('effects')}
-                  className="flex w-full items-center justify-between gap-3"
+                  className="flex items-center gap-3"
                 >
                   <ChevronRightIcon className={`w-4 h-4 transition-transform ${openSections.effects ? 'rotate-90' : ''}`} />
                   <SectionHeader title="Effects" icon={<EffectsIcon />} />
@@ -708,6 +720,10 @@ export default function AppLayout() {
                     defaultValue={selectedPreset.vignette} onChange={setVignetteAmount} format={(v) => `${(v * 100).toFixed(0)}%`} icon={<VignetteIcon />} />
                   <SliderControl label="Halation" value={eff.halation} min={0} max={0.8} step={0.01}
                     defaultValue={selectedPreset.halation} onChange={setHalationAmount} format={(v) => `${(v * 100).toFixed(0)}%`} icon={<HalationIcon />} />
+                  <SliderControl label="Saturation" value={eff.saturation} min={0} max={2} step={0.01}
+                    defaultValue={selectedPreset.saturation} onChange={setSaturationAmount} format={(v) => `${(v * 100).toFixed(0)}%`} icon={<SaturationIcon />} />
+                  <SliderControl label="Faded Blacks" value={eff.fadedBlacks} min={0} max={0.25} step={0.005}
+                    defaultValue={selectedPreset.fadedBlacks} onChange={setFadedBlacks} format={(v) => `${(v * 100).toFixed(0)}%`} icon={<FadedBlacksIcon />} />
                 </div>
               )}
 
@@ -715,7 +731,7 @@ export default function AppLayout() {
                 <button
                   type="button"
                   onClick={() => toggleSection('opticalEffects')}
-                  className="flex w-full items-center justify-between gap-3"
+                  className="flex items-center gap-3"
                 >
                   <ChevronRightIcon className={`w-4 h-4 transition-transform ${openSections.opticalEffects ? 'rotate-90' : ''}`} />
                   <SectionHeader title="Optical Effects" icon={<OpticalIcon />} />
