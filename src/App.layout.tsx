@@ -551,7 +551,7 @@ export default function AppLayout() {
                   className="px-2.5 py-1.5 rounded-lg text-xs flex items-center gap-1.5 transition-all border flex-shrink-0 bg-zinc-800/80 text-zinc-500 hover:text-zinc-300 border-zinc-700/50 disabled:opacity-40 disabled:cursor-not-allowed"
                 >
                   <ResetIcon />
-                  <span className="hidden md:inline ml-1">Reset All</span>
+                  <span className="hidden md:inline ml-1">Reset</span>
                 </button>
               </>
             )}
@@ -560,7 +560,7 @@ export default function AppLayout() {
               className="px-3 py-1.5 rounded-lg text-xs bg-zinc-800/90 hover:bg-zinc-700 text-zinc-100 font-semibold flex items-center gap-1.5 transition-all border border-zinc-700 flex-shrink-0 whitespace-nowrap"
             >
               <FrameIcon />
-              <span className="hidden md:inline ml-1">Framing Tool</span>
+              <span className="hidden md:inline ml-1">Framer</span>
             </button>
             {image && (
               <button
@@ -568,7 +568,7 @@ export default function AppLayout() {
                 className="px-3 py-1.5 rounded-lg text-xs bg-amber-500 hover:bg-amber-400 text-black font-semibold flex items-center gap-1.5 transition-all shadow-lg shadow-amber-500/20 flex-shrink-0 whitespace-nowrap"
               >
                 <DownloadIcon />
-                <span className="hidden md:inline ml-1">Export JPG</span>
+                <span className="hidden md:inline ml-1">Export</span>
               </button>
             )}
           </div>
@@ -1368,10 +1368,10 @@ export default function AppLayout() {
                       style={{
                         imageRendering: 'auto',
                         objectFit: isMobile ? 'contain' : selectedFrame ? 'cover' : 'contain',
+                        width: '100%',
+                        height: '100%',
                         maxWidth: '100%',
                         maxHeight: '100%',
-                        width: 'auto',
-                        height: 'auto',
                         display: 'block',
                         touchAction: 'none',
                       }}
