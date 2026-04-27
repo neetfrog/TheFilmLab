@@ -960,7 +960,7 @@ export default function AppLayout() {
                       <SliderControl
                         label="Rotation"
                         value={overlayRotationByCategory[activeOverlayCategory]}
-                        min={-180} max={180} step={1}
+                        min={-180} max={180} step={90}
                         defaultValue={0}
                         onChange={(v) => setOverlayRotationByCategory((prev) => ({
                           ...prev,
