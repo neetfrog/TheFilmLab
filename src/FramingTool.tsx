@@ -1,6 +1,6 @@
 import { useState, useRef, useCallback, useEffect } from 'react';
 import { framePresets, frameColors, FramePreset } from './framePresets';
-import { fitRatioIntoBounds, getCanvasSizeForRatio, getCenteredDrawRect } from './canvasUtils';
+import { getCanvasSizeForRatio, getCenteredDrawRect, padRatioToSourceBounds } from './canvasUtils';
 
 interface ImageDataEntry {
   file: File;
@@ -110,7 +110,7 @@ export default function FramingTool({ isOpen, onClose }: FramingToolProps) {
 
     await new Promise<void>((resolve) => {
       image.onload = () => {
-        const size = fitRatioIntoBounds(image.width, image.height, selectedPreset.ratio);
+        const size = padRatioToSourceBounds(image.width, image.height, selectedPreset.ratio);
         canvas.width = Math.round(size.width);
         canvas.height = Math.round(size.height);
         ctx.fillStyle = frameColor;

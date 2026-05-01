@@ -86,3 +86,23 @@ export function fitRatioIntoBounds(
 
   return { width, height };
 }
+
+export function padRatioToSourceBounds(
+  sourceWidth: number,
+  sourceHeight: number,
+  targetRatio: number,
+) {
+  const sourceRatio = sourceWidth / sourceHeight;
+
+  if (sourceRatio > targetRatio) {
+    return {
+      width: sourceWidth,
+      height: Math.round(sourceWidth / targetRatio),
+    };
+  }
+
+  return {
+    width: Math.round(sourceHeight * targetRatio),
+    height: sourceHeight,
+  };
+}
