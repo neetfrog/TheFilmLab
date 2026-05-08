@@ -42,8 +42,12 @@ export default function CurvesEditor({
   const svgRef = useRef<SVGSVGElement | null>(null);
   const draggingRef = useRef<{ channel: CurveChannel; index: number } | null>(null);
 
-  const activePoints = activeChannel === 'master' ? curves.master : curves[activeChannel];
+  const rawPoints = activeChannel === 'master' ? curves.master : curves[activeChannel];
   const activeColor = channelColors[activeChannel];
+
+  const displayPoints = rawPoints.length === 2
+    ? [rawPoints[0], [(rawPoints[0][0] + rawPoints[1][0]) / 2, (rawPoints[0][1] + rawPoints[1][1]) / 2] as [number, number], rawPoints[1]]
+    : rawPoints;
 
   const padding = 12;
   const size = 240;
@@ -65,11 +69,9 @@ export default function CurvesEditor({
     let x = clamp((event.clientX - rect.left) / rect.width);
     let y = clamp(1 - (event.clientY - rect.top) / rect.height);
 
-    const points = curves[drag.channel];
+    const points = displayPoints;
     const minX = drag.index === 0 ? 0 : points[drag.index - 1][0] + 0.02;
     const maxX = drag.index === points.length - 1 ? 1 : points[drag.index + 1][0] - 0.02;
-    if (drag.index === 0) x = 0;
-    if (drag.index === points.length - 1) x = 1;
     x = clamp(x, minX, maxX);
 
     const nextPoints = points.map((point, index) =>
@@ -77,7 +79,7 @@ export default function CurvesEditor({
     );
 
     onCurveChange(drag.channel, nextPoints);
-  }, [curves, onCurveChange]);
+  }, [displayPoints, onCurveChange]);
 
   useEffect(() => {
     const handlePointerMove = (event: PointerEvent) => updateDraggedPoint(event);
@@ -153,14 +155,14 @@ export default function CurvesEditor({
               );
             })}
             <polyline
-              points={getPointData(activePoints)}
+              points={getPointData(displayPoints)}
               fill="none"
               stroke={activeColor}
               strokeWidth="3"
               strokeLinecap="round"
               strokeLinejoin="round"
             />
-            {activePoints.map(([x, y], index) => (
+            {displayPoints.map(([x, y], index) => (
               <g key={index} className="cursor-pointer" onPointerDown={startDrag(activeChannel, index)}>
                 <circle
                   cx={padding + x * innerSize}
