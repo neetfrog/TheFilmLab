@@ -10,8 +10,10 @@
   },
   "dependencies": {
     "clsx": "2.1.1",
+    "libraw-wasm": "^1.1.2",
     "react": "19.2.3",
     "react-dom": "19.2.3",
+    "react-dropzone": "^15.0.0",
     "tailwind-merge": "3.4.0"
   },
   "devDependencies": {

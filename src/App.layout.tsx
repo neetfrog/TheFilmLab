@@ -51,6 +51,7 @@ import {
   BLEND_MODES,
 } from './App.helpers';
 import FramingTool from './FramingTool';
+import NegativeConverterTool from './NegativeConverterTool';
 
 export default function AppLayout() {
   const state = useFilmLabState();
@@ -71,6 +72,7 @@ export default function AppLayout() {
   const [mobileSheetHeight, setMobileSheetHeight] = useState(55);
   const [isTouchPinching, setIsTouchPinching] = useState(false);
   const [framingToolOpen, setFramingToolOpen] = useState(false);
+  const [negativeConverterToolOpen, setNegativeConverterToolOpen] = useState(false);
   const startXRef = useRef(0);
   const startWidthRef = useRef(310);
   const startYRef = useRef(0);
@@ -381,6 +383,15 @@ export default function AppLayout() {
             >
               <FrameIcon />
               <span className="hidden md:inline ml-1">Framer</span>
+            </button>
+            <button
+              onClick={() => setNegativeConverterToolOpen(true)}
+              className="px-2.5 py-1.5 rounded-lg text-xs flex items-center gap-1.5 transition-all border flex-shrink-0 bg-zinc-800/80 text-zinc-500 hover:text-zinc-300 border-zinc-700/50"
+              title="Open negative converter"
+              aria-label="Open negative converter"
+            >
+              📽️
+              <span className="hidden md:inline ml-1">Negative</span>
             </button>
             <button
               onClick={() => setIsAboutOpen(true)}
@@ -1105,6 +1116,7 @@ export default function AppLayout() {
         </aside>
 
         <FramingTool isOpen={framingToolOpen} onClose={() => setFramingToolOpen(false)} />
+        <NegativeConverterTool isOpen={negativeConverterToolOpen} onClose={() => setNegativeConverterToolOpen(false)} />
 
         {sidebarOpen && (
           <div
