@@ -820,8 +820,8 @@ export default function AppLayout() {
                   defaultValue={selectedPreset.whiteBalance ?? 0} onChange={handleWhiteBalanceChange} format={(v) => `${Math.round(whiteBalanceToKelvin(v))}K`} icon={<WhiteBalanceIcon />} />
                 <SliderControl label="Tint" value={eff.tint} min={-150} max={150} step={1}
                   defaultValue={selectedPreset.tint ?? 0} onChange={setTintAmount} format={(v) => v > 0 ? `+${Math.round(v)} Magenta` : v < 0 ? `${Math.round(v)} Green` : 'Neutral'} icon={<ColorShiftIcon />} />
-                <SliderControl label="Exposure" value={exposure} min={-2} max={2} step={0.05}
-                  defaultValue={0} onChange={(v) => setExposure(v ?? 0)} format={(v) => `${v > 0 ? '+' : ''}${v.toFixed(1)} EV`} icon={<ExposureIcon />} />
+                <SliderControl label="Exposure" value={exposure} min={-3} max={3} step={0.025}
+                  defaultValue={0} onChange={(v) => setExposure(v ?? 0)} format={(v) => `${v > 0 ? '+' : ''}${v.toFixed(2)} EV`} icon={<ExposureIcon />} />
                 <SliderControl label="Contrast" value={eff.contrast} min={-0.5} max={0.5} step={0.01}
                   defaultValue={selectedPreset.contrast} onChange={setContrastAmount} format={(v) => `${v > 0 ? '+' : ''}${(v * 100).toFixed(0)}`} icon={<ContrastIcon />} />
                 <SliderControl label="Brightness" value={eff.brightness} min={-0.3} max={0.3} step={0.01}

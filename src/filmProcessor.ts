@@ -16,14 +16,42 @@ function getLUTCacheKey(prefix: string, values: Array<number | string>) {
 const clampByte = (value: number) => Math.max(0, Math.min(255, Math.round(value)));
 const clampUnit = (value: number) => Math.max(0, Math.min(1, value));
 
-const applyExposureSoftKnee = (value: number) => {
-  // More aggressive compression to prevent clipping at high exposures
-  const kneeStart = 200;   // Start compression earlier
-  const kneeStrength = 25; // Maximum compression amount
-  if (value <= kneeStart) return value;
-  // Logarithmic compression: gentler at first, stronger at extremes
-  const excess = Math.min(value - kneeStart, 100);
-  return kneeStart + kneeStrength * Math.log(1 + excess / 10);
+// HDR exposure + tone mapping (works in linear float space)
+// Prevents early clipping by working with raw linear values
+const applyExposureHDR = (r: number, g: number, b: number, exposure: number, brightness: number): [number, number, number] => {
+  // Normalize 8-bit to linear float (0-1 range)
+  let fr = r / 255;
+  let fg = g / 255;
+  let fb = b / 255;
+  
+  // Apply exposure in linear space (before tone mapping)
+  // This is the key: multiply linear values, not clamped 8-bit values
+  const exposureMult = Math.pow(2, exposure);
+  fr *= exposureMult;
+  fg *= exposureMult;
+  fb *= exposureMult;
+  
+  // Add brightness bias in linear space
+  if (brightness !== 0) {
+    const brightnessMult = 1 + brightness * 0.5;
+    fr *= brightnessMult;
+    fg *= brightnessMult;
+    fb *= brightnessMult;
+  }
+  
+  // Reinhard tone mapping: compresses HDR values smoothly to 0-1
+  // Formula: x / (1 + x) provides asymptotic compression
+  // Prevents clipping while preserving detail in highlights
+  fr = fr / (1 + fr);
+  fg = fg / (1 + fg);
+  fb = fb / (1 + fb);
+  
+  // Convert back to 8-bit
+  return [
+    clampByte(fr * 255),
+    clampByte(fg * 255),
+    clampByte(fb * 255),
+  ];
 };
 
 const applyWhiteBalance = (whiteBalance: number, r: number, g: number, b: number) => {
@@ -286,9 +314,7 @@ export function processImage(
   const lutB = buildCurveLUT(preset.curves.b);
   const contrastLUT = buildContrastLUT(contrast, preset.toeStrength, preset.shoulderStrength, fadedBlacks);
 
-  // Exposure multiplier
-  const exposureMult = Math.pow(2, exposure);
-  const brightnessBias = brightness * 40;
+  // Prepare processing state
   const satInv = saturation !== 1.0;
   const hasBalance = whiteBalance !== 0;
   const hasWbMultipliers = wbMultipliers !== null && wbMultipliers !== undefined;
@@ -305,10 +331,9 @@ export function processImage(
     let g = data[i + 1];
     let b = data[i + 2];
 
-    if (exposure !== 0 || brightnessBias !== 0) {
-      r = clamp(applyExposureSoftKnee(r * exposureMult + brightnessBias));
-      g = clamp(applyExposureSoftKnee(g * exposureMult + brightnessBias));
-      b = clamp(applyExposureSoftKnee(b * exposureMult + brightnessBias));
+    // Apply HDR exposure + tone mapping (works in linear space)
+    if (exposure !== 0 || brightness !== 0) {
+      [r, g, b] = applyExposureHDR(r, g, b, exposure, brightness);
     }
 
     // Apply neutral-point WB multipliers (highest priority, applied early)

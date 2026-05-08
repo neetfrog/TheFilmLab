@@ -31,14 +31,17 @@ function LevelsHistogram({
   const maxGamma = 4;
 
   const gammaToPosition = useCallback((gammaValue: number) => {
+    // Inverted: right = darker (lower gamma), left = lighter (higher gamma)
     const normalizedGamma = Math.min(1, Math.max(0, Math.log(gammaValue / minGamma) / Math.log(maxGamma / minGamma)));
-    return inputBlack + normalizedGamma * (inputWhite - inputBlack);
+    const inverted = 1 - normalizedGamma; // Flip the position
+    return inputBlack + inverted * (inputWhite - inputBlack);
   }, [inputBlack, inputWhite]);
 
   const positionToGamma = useCallback((position: number) => {
     const range = Math.max(0.001, inputWhite - inputBlack);
     const normalized = Math.min(1, Math.max(0, (position - inputBlack) / range));
-    return minGamma * Math.pow(maxGamma / minGamma, normalized);
+    const inverted = 1 - normalized; // Flip the calculation
+    return minGamma * Math.pow(maxGamma / minGamma, inverted);
   }, [inputBlack, inputWhite]);
 
   const clampGammaPosition = useCallback((position: number) => {
@@ -64,7 +67,7 @@ function LevelsHistogram({
     }
   }, [gamma, gammaToPosition, onInputBlackChange, onInputWhiteChange, onGammaChange, positionToGamma, clamp, clampGammaPosition]);
 
-  const drawHistogram = useCallback(() => {
+  const drawHistogramBars = useCallback(() => {
     const canvas = canvasRef.current;
     const wrapper = canvasWrapperRef.current;
     if (!canvas || !wrapper || !histogram) return;
@@ -95,30 +98,20 @@ function LevelsHistogram({
       const h = value * rect.height;
       ctx.fillRect(x * barWidth, rect.height - h, Math.max(1, barWidth), h);
     }
-
-    const drawMarker = (position: number, color: string) => {
-      const x = rect.width * clamp(position);
-      ctx.fillStyle = color;
-      ctx.fillRect(x - 1, 0, 2, rect.height);
-    };
-
-    drawMarker(inputBlack, 'rgba(250,204,21,0.85)');
-    drawMarker(gammaToPosition(gamma), 'rgba(56, 189, 248, 0.85)');
-    drawMarker(inputWhite, 'rgba(250,204,21,0.85)');
-  }, [clamp, gammaToPosition, histogram, inputBlack, inputWhite, gamma]);
+  }, [histogram]);
 
   useEffect(() => {
-    drawHistogram();
-  }, [drawHistogram]);
+    drawHistogramBars();
+  }, [drawHistogramBars]);
 
   useEffect(() => {
     const wrapper = canvasWrapperRef.current;
     if (!wrapper) return;
 
-    const observer = new ResizeObserver(() => drawHistogram());
+    const observer = new ResizeObserver(() => drawHistogramBars());
     observer.observe(wrapper);
     return () => observer.disconnect();
-  }, [drawHistogram]);
+  }, [drawHistogramBars]);
 
   useEffect(() => {
     const handlePointerMove = (event: PointerEvent) => {
