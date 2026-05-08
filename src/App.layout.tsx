@@ -5,6 +5,7 @@ import SliderControl from './components/SliderControl';
 import LevelsHistogram from './components/LevelsHistogram';
 import CurvesEditor from './components/CurvesEditor';
 import { useFilmLabState } from './App.state';
+import { getImageAcceptAttribute } from './utils/imageDecoder';
 import {
   typeLabels,
   typeColors,
@@ -1328,7 +1329,7 @@ export default function AppLayout() {
           <input
             ref={fileInputRef}
             type="file"
-            accept="image/*"
+            accept={getImageAcceptAttribute()}
             multiple
             onChange={(e) => {
               const files = e.target.files;

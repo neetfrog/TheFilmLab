@@ -1,5 +1,6 @@
 import { useState, useRef, useCallback, useEffect, useMemo, useLayoutEffect } from 'react';
 import { filmPresets } from './filmPresets';
+import { decodeImage } from './utils/imageDecoder';
 import {
   PRESET_STORAGE_KEY,
   FAVORITES_STORAGE_KEY,
@@ -493,45 +494,49 @@ export function useFilmLabState() {
   const handleBatchFiles = useCallback((files: FileList | File[]) => {
     const useNeutralPreset = batchImages.length === 0;
     Array.from(files).forEach((file) => {
-      if (!file.type.startsWith('image/')) return;
-      const reader = new FileReader();
-      reader.onload = (e) => {
-        const result = e.target?.result;
-        if (!result || typeof result !== 'string') return;
-        const img = new Image();
-        img.onload = () => {
+      // Attempt to decode both standard images and RAW formats
+      decodeImage(file, {
+        maxDim: 3200,
+        onProgress: () => {}, // Silent progress for batch
+      })
+        .then((data) => {
           const maxDim = 3200;
-          let w = img.width;
-          let h = img.height;
+          let w = data.width;
+          let h = data.height;
           if (w > maxDim || h > maxDim) {
             const scale = maxDim / Math.max(w, h);
             w = Math.round(w * scale);
             h = Math.round(h * scale);
           }
+
+          // Create URL for preview
           const tempCanvas = document.createElement('canvas');
-          tempCanvas.width = w;
-          tempCanvas.height = h;
+          tempCanvas.width = data.width;
+          tempCanvas.height = data.height;
           const ctx = tempCanvas.getContext('2d')!;
-          ctx.drawImage(img, 0, 0, w, h);
-          const data = ctx.getImageData(0, 0, w, h);
+          ctx.putImageData(data, 0, 0);
+          const url = tempCanvas.toDataURL('image/jpeg', 0.95);
+
           addBatchEntry({
             id: `${file.name}-${Date.now()}`,
             file,
-            url: result,
+            url,
             width: w,
             height: h,
             name: file.name,
             data,
-            thumbUrl: result,
+            thumbUrl: url,
             editState: {
               ...getCurrentBatchEditState(),
-              selectedPreset: useNeutralPreset ? filmPresets[0] : getCurrentBatchEditState().selectedPreset,
+              selectedPreset: useNeutralPreset
+                ? filmPresets[0]
+                : getCurrentBatchEditState().selectedPreset,
             },
           });
-        };
-        img.src = result;
-      };
-      reader.readAsDataURL(file);
+        })
+        .catch((err) => {
+          console.error(`Failed to load ${file.name}:`, err);
+        });
     });
   }, [addBatchEntry, batchImages.length, getCurrentBatchEditState]);
 

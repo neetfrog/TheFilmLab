@@ -3,24 +3,26 @@ import {
   useRef,
   useCallback,
   useEffect,
-  useMemo,
 } from 'react';
-import LibRaw from 'libraw-wasm';
 import { useDropzone } from 'react-dropzone';
 import {
   defaultParams,
   processNegative,
   detectOrangeMask,
-  computeHistogram,
   type ProcessingParams,
 } from './negativeConverter/imageProcessor';
 import { FILM_PROFILES } from './negativeConverter/filmProfiles';
-
-interface ImageDataEntry {
-  file: File;
-  url: string;
-  imageData: ImageData;
-}
+import { decodeImage } from './utils/imageDecoder';
+import SliderControl from './components/SliderControl';
+import SectionHeader from './components/SectionHeader';
+import {
+  ExposureIcon,
+  ContrastIcon,
+  SaturationIcon,
+  WhiteBalanceIcon,
+  GrainIconSmall,
+  ResetIcon,
+} from './App.helpers';
 
 interface NegativeConverterToolProps {
   isOpen: boolean;
@@ -45,7 +47,6 @@ export default function NegativeConverterTool({
   );
   const [splitPos, setSplitPos] = useState(50);
 
-  const fileInputRef = useRef<HTMLInputElement>(null);
   const outCanvasRef = useRef<HTMLCanvasElement>(
     document.createElement('canvas')
   );
@@ -54,239 +55,16 @@ export default function NegativeConverterTool({
 
   // ─── File loading ─────────────────────────────────────────────────────────
 
-  const isRawFormat = (filename: string): boolean => {
-    const rawExtensions = [
-      '.raw',
-      '.dng',
-      '.nef',
-      '.cr2',
-      '.crw',
-      '.arw',
-      '.orf',
-      '.raf',
-      '.rw2',
-      '.pef',
-      '.srw',
-      '.mrw',
-      '.3fr',
-      '.mef',
-      '.mos',
-    ];
-    return rawExtensions.some((ext) =>
-      filename.toLowerCase().endsWith(ext)
-    );
-  };
-
-  const decodeImage = async (file: File): Promise<ImageData> => {
-    setLoadingStage('Decoding image...');
-    const url = URL.createObjectURL(file);
-    const img = new Image();
-    img.crossOrigin = 'anonymous';
-
-    const loadPromise = new Promise<HTMLImageElement>((resolve, reject) => {
-      img.onload = () => resolve(img);
-      img.onerror = () => reject(new Error('Image decode failed'));
-      img.src = url;
-    });
-
-    try {
-      const loaded = await loadPromise;
-      setLoadingStage('Processing image...');
-      const maxDim = 2400;
-      let w = loaded.naturalWidth;
-      let h = loaded.naturalHeight;
-
-      if (w > maxDim || h > maxDim) {
-        const scale = Math.min(maxDim / w, maxDim / h);
-        w = Math.round(w * scale);
-        h = Math.round(h * scale);
-      }
-
-      const c = document.createElement('canvas');
-      c.width = w;
-      c.height = h;
-      c.getContext('2d')!.drawImage(loaded, 0, 0, w, h);
-      return c.getContext('2d')!.getImageData(0, 0, w, h);
-    } finally {
-      URL.revokeObjectURL(url);
-    }
-  };
-
-  const decodeRaw = async (file: File): Promise<ImageData> => {
-    try {
-      setLoadingStage('Reading raw file...');
-      const arrayBuffer = await file.arrayBuffer();
-      const uint8Array = new Uint8Array(arrayBuffer);
-
-      // Try canvas image loading first for formats browsers understand
-      if (file.name.toLowerCase().endsWith('.dng')) {
-        try {
-          return await decodeStandardImage(new Blob([uint8Array], { type: 'image/tiff' }));
-        } catch (e) {
-          // Fall through to libraw
-        }
-      }
-
-      // Use libraw for CR2, NEF, ARW, etc.
-      return await decodeWithLibRaw(uint8Array);
-    } catch (error) {
-      throw new Error(
-        `Raw decode failed: ${error instanceof Error ? error.message : 'Unknown error'}`
-      );
-    }
-  };
-
-  const decodeStandardImage = async (blob: Blob): Promise<ImageData> => {
-    setLoadingStage('Decoding image...');
-    const url = URL.createObjectURL(blob);
-    const img = new Image();
-    img.crossOrigin = 'anonymous';
-
-    return new Promise((resolve, reject) => {
-      img.onload = () => {
-        try {
-          setLoadingStage('Processing image...');
-          const maxDim = 2400;
-          let w = img.naturalWidth;
-          let h = img.naturalHeight;
-
-          if (w > maxDim || h > maxDim) {
-            const scale = Math.min(maxDim / w, maxDim / h);
-            w = Math.round(w * scale);
-            h = Math.round(h * scale);
-          }
-
-          const c = document.createElement('canvas');
-          c.width = w;
-          c.height = h;
-          c.getContext('2d')!.drawImage(img, 0, 0, w, h);
-          URL.revokeObjectURL(url);
-          resolve(c.getContext('2d')!.getImageData(0, 0, w, h));
-        } catch (e) {
-          URL.revokeObjectURL(url);
-          reject(e);
-        }
-      };
-
-      img.onerror = () => {
-        URL.revokeObjectURL(url);
-        reject(new Error('Could not decode as standard image format'));
-      };
-
-      img.src = url;
-    });
-  };
-
-  const decodeWithLibRaw = async (uint8Array: Uint8Array): Promise<ImageData> => {
-    try {
-      setLoadingStage('Initializing RAW decoder...');
-      const libraw = new LibRaw();
-
-      setLoadingStage('Decoding RAW data...');
-      await libraw.open(uint8Array, {
-        bright: 1.0,
-        useAutoWb: false,
-        useCameraWb: true,
-        outputColor: 1, // sRGB
-        outputBps: 8, // 8 bits per sample
-        userQual: 3, // interpolation quality
-        halfSize: false,
-      });
-
-      setLoadingStage('Extracting image data...');
-      const rawImageData = await libraw.imageData();
-
-      if (!rawImageData) {
-        throw new Error('Failed to extract image data from RAW file');
-      }
-
-      const { width, height, data, colors } = rawImageData;
-
-      // Resize if too large
-      const maxDim = 2400;
-      let finalWidth = width;
-      let finalHeight = height;
-
-      if (width > maxDim || height > maxDim) {
-        const scale = Math.min(maxDim / width, maxDim / height);
-        finalWidth = Math.round(width * scale);
-        finalHeight = Math.round(height * scale);
-      }
-
-      setLoadingStage('Converting to image format...');
-
-      // Create the target canvas/imagedata
-      const targetCanvas = document.createElement('canvas');
-      targetCanvas.width = finalWidth;
-      targetCanvas.height = finalHeight;
-      const ctx = targetCanvas.getContext('2d')!;
-      const imageData = ctx.createImageData(finalWidth, finalHeight);
-      const imgData = imageData.data;
-
-      // If we need to scale, first create a temporary canvas with original dimensions
-      if (finalWidth !== width || finalHeight !== height) {
-        const tempCanvas = document.createElement('canvas');
-        tempCanvas.width = width;
-        tempCanvas.height = height;
-        const tempCtx = tempCanvas.getContext('2d')!;
-        const tempImageData = tempCtx.createImageData(width, height);
-        const tempData = tempImageData.data;
-
-        // Copy RGB data to temporary canvas
-        for (let i = 0; i < Math.min(data.length, width * height * (colors || 3)); i += colors || 3) {
-          const pixelIdx = i / (colors || 3);
-          const dstIdx = pixelIdx * 4;
-
-          tempData[dstIdx] = data[i] || 0;
-          tempData[dstIdx + 1] = colors && colors > 1 ? (data[i + 1] || 0) : data[i] || 0;
-          tempData[dstIdx + 2] = colors && colors > 2 ? (data[i + 2] || 0) : data[i] || 0;
-          tempData[dstIdx + 3] = 255;
-        }
-
-        tempCtx.putImageData(tempImageData, 0, 0);
-
-        // Scale to final size
-        ctx.drawImage(tempCanvas, 0, 0, finalWidth, finalHeight);
-        return ctx.getImageData(0, 0, finalWidth, finalHeight);
-      } else {
-        // No scaling needed - direct copy
-        for (let i = 0; i < Math.min(data.length, width * height * (colors || 3)); i += colors || 3) {
-          const pixelIdx = i / (colors || 3);
-          const dstIdx = pixelIdx * 4;
-
-          imgData[dstIdx] = data[i] || 0;
-          imgData[dstIdx + 1] = colors && colors > 1 ? (data[i + 1] || 0) : data[i] || 0;
-          imgData[dstIdx + 2] = colors && colors > 2 ? (data[i + 2] || 0) : data[i] || 0;
-          imgData[dstIdx + 3] = 255;
-        }
-
-        return imageData;
-      }
-    } catch (error) {
-      setLoadingStage('');
-      throw new Error(
-        `RAW decoder error: ${error instanceof Error ? error.message : 'Unknown error'}`
-      );
-    }
-  };
-
   const loadFile = useCallback(async (file: File) => {
     setLoading(true);
     setLoadError(null);
     setFileName(file.name);
 
     try {
-      let imageData: ImageData;
-
-      try {
-        imageData = await decodeImage(file);
-      } catch (stdError) {
-        if (isRawFormat(file.name)) {
-          imageData = await decodeRaw(file);
-        } else {
-          throw stdError;
-        }
-      }
+      const imageData = await decodeImage(file, {
+        maxDim: 2400,
+        onProgress: setLoadingStage,
+      });
 
       setLoadingStage('Analyzing image...');
       setSrcImageData(imageData);
@@ -384,7 +162,6 @@ export default function NegativeConverterTool({
   if (!isOpen) return null;
 
   const hasOutUrl = !!outUrl && !processing;
-  const debouncedProcessing = processing;
 
   return (
     <div className="fixed inset-0 z-50 bg-black/80 flex items-center justify-center p-4">
@@ -410,175 +187,15 @@ export default function NegativeConverterTool({
         {/* Main content */}
         <div className="flex-1 overflow-hidden flex">
           {/* Left sidebar - Controls */}
-          <div className="w-72 bg-zinc-800/50 border-r border-zinc-700 overflow-y-auto p-4 space-y-4">
-            {/* Film Type */}
-            <div>
-              <label className="text-xs font-semibold text-zinc-300 uppercase">
-                Film Type
-              </label>
-              <div className="grid grid-cols-2 gap-2 mt-2">
-                {(['color', 'bw'] as const).map((t) => (
-                  <button
-                    key={t}
-                    onClick={() => setParams({ ...params, filmType: t })}
-                    className={`py-2 px-3 rounded text-xs font-medium transition-all ${
-                      params.filmType === t
-                        ? 'bg-amber-400 text-zinc-900'
-                        : 'bg-zinc-700 text-zinc-300 hover:bg-zinc-600'
-                    }`}
-                  >
-                    {t === 'color' ? 'Color' : 'B&W'}
-                  </button>
-                ))}
-              </div>
-            </div>
-
-            {/* Orange Mask */}
-            {params.filmType === 'color' && (
-              <div>
-                <label className="text-xs font-semibold text-zinc-300 uppercase">
-                  Orange Mask (RGB)
-                </label>
-                <div className="mt-2 space-y-1.5">
-                  {(
-                    ['maskRed', 'maskGreen', 'maskBlue'] as const
-                  ).map((key, idx) => (
-                    <div key={key} className="flex items-center gap-2">
-                      <input
-                        type="range"
-                        min="0"
-                        max="255"
-                        value={params[key]}
-                        onChange={(e) =>
-                          setParams({
-                            ...params,
-                            [key]: parseInt(e.target.value),
-                          })
-                        }
-                        className="flex-1 h-1.5 rounded"
-                      />
-                      <span className="text-xs text-zinc-400 w-8 text-right">
-                        {params[key]}
-                      </span>
-                    </div>
-                  ))}
-                </div>
-              </div>
-            )}
-
-            {/* Exposure */}
-            <div>
-              <label className="text-xs font-semibold text-zinc-300 uppercase">
-                Exposure
-              </label>
-              <input
-                type="range"
-                min="-2"
-                max="2"
-                step="0.1"
-                value={params.exposure}
-                onChange={(e) =>
-                  setParams({ ...params, exposure: parseFloat(e.target.value) })
-                }
-                className="w-full h-1.5 rounded mt-2"
-              />
-              <span className="text-xs text-zinc-400 inline-block mt-1">
-                {params.exposure > 0 ? '+' : ''}
-                {params.exposure.toFixed(1)}
-              </span>
-            </div>
-
-            {/* Contrast */}
-            <div>
-              <label className="text-xs font-semibold text-zinc-300 uppercase">
-                Contrast
-              </label>
-              <input
-                type="range"
-                min="-100"
-                max="100"
-                value={params.contrast}
-                onChange={(e) =>
-                  setParams({ ...params, contrast: parseInt(e.target.value) })
-                }
-                className="w-full h-1.5 rounded mt-2"
-              />
-              <span className="text-xs text-zinc-400 inline-block mt-1">
-                {params.contrast}
-              </span>
-            </div>
-
-            {/* Saturation */}
-            <div>
-              <label className="text-xs font-semibold text-zinc-300 uppercase">
-                Saturation
-              </label>
-              <input
-                type="range"
-                min="-100"
-                max="100"
-                value={params.saturation}
-                onChange={(e) =>
-                  setParams({ ...params, saturation: parseInt(e.target.value) })
-                }
-                className="w-full h-1.5 rounded mt-2"
-              />
-              <span className="text-xs text-zinc-400 inline-block mt-1">
-                {params.saturation}
-              </span>
-            </div>
-
-            {/* Film Presets */}
-            <div>
-              <label className="text-xs font-semibold text-zinc-300 uppercase">
-                Film Stocks
-              </label>
-              <div className="mt-2 space-y-1">
-                {FILM_PROFILES.slice(0, 8).map((film) => (
-                  <button
-                    key={film.name}
-                    onClick={() => {
-                      const mask = {
-                        maskRed: params.maskRed,
-                        maskGreen: params.maskGreen,
-                        maskBlue: params.maskBlue,
-                      };
-                      setParams({
-                        ...defaultParams,
-                        ...film.params,
-                        ...mask,
-                      } as ProcessingParams);
-                    }}
-                    disabled={!hasImage}
-                    className="w-full text-left px-2 py-1.5 rounded text-xs bg-zinc-700 hover:bg-zinc-600 disabled:opacity-40 disabled:cursor-not-allowed transition-colors"
-                  >
-                    {film.name}
-                  </button>
-                ))}
-              </div>
-            </div>
-
-            {/* Reset */}
-            {hasImage && (
-              <button
-                onClick={() => {
-                  const mask = detectOrangeMask(
-                    srcImageData!.data,
-                    srcImageData!.width,
-                    srcImageData!.height
-                  );
-                  setParams({
-                    ...defaultParams,
-                    maskRed: Math.round(mask.r),
-                    maskGreen: Math.round(mask.g),
-                    maskBlue: Math.round(mask.b),
-                  });
-                }}
-                className="w-full py-2 px-3 rounded text-xs font-medium bg-zinc-700 hover:bg-zinc-600 text-zinc-300 transition-all"
-              >
-                Reset Settings
-              </button>
-            )}
+          <div className="w-72 bg-zinc-800/50 border-r border-zinc-700 overflow-y-auto p-4">
+            <ControlsPanel
+              params={params}
+              defaultParams={defaultParams}
+              setParams={setParams}
+              srcImageData={srcImageData}
+              hasImage={hasImage}
+              onReset={(newParams) => setParams(newParams)}
+            />
           </div>
 
           {/* Center - Image preview */}
@@ -692,7 +309,6 @@ export default function NegativeConverterTool({
                         className="absolute top-0 bottom-0 w-1 bg-amber-400 cursor-col-resize"
                         style={{ left: `${splitPos}%` }}
                         onMouseDown={(e) => {
-                          const startX = e.clientX;
                           const rect = e.currentTarget.parentElement!.getBoundingClientRect();
                           const handleMouseMove = (me: MouseEvent) => {
                             const newPos = Math.max(
@@ -746,6 +362,301 @@ export default function NegativeConverterTool({
           </div>
         </div>
       </div>
+    </div>
+  );
+}
+
+// ─── Controls Panel Component ─────────────────────────────────────────────
+
+interface SliderConfig {
+  key: keyof ProcessingParams;
+  label: string;
+  min: number;
+  max: number;
+  step: number;
+  format: (v: number) => string;
+  icon?: React.ReactNode;
+}
+
+interface ControlsPanelProps {
+  params: ProcessingParams;
+  defaultParams: ProcessingParams;
+  setParams: (p: ProcessingParams) => void;
+  srcImageData: ImageData | null;
+  hasImage: boolean;
+  onReset: (params: ProcessingParams) => void;
+}
+
+function ControlsPanel({
+  params,
+  defaultParams,
+  setParams,
+  srcImageData,
+  hasImage,
+  onReset,
+}: ControlsPanelProps) {
+  // Slider configurations organized by section
+  const sliderSections: Record<string, SliderConfig[]> = {
+    exposure: [
+      {
+        key: 'exposure',
+        label: 'Exposure',
+        min: -2,
+        max: 2,
+        step: 0.1,
+        format: (v) => (v > 0 ? '+' : '') + v.toFixed(1),
+        icon: <ExposureIcon />,
+      },
+    ],
+    tone: [
+      {
+        key: 'contrast',
+        label: 'Contrast',
+        min: -100,
+        max: 100,
+        step: 1,
+        format: (v) => v.toString(),
+        icon: <ContrastIcon />,
+      },
+      {
+        key: 'saturation',
+        label: 'Saturation',
+        min: -100,
+        max: 100,
+        step: 1,
+        format: (v) => v.toString(),
+        icon: <SaturationIcon />,
+      },
+      {
+        key: 'vibrance',
+        label: 'Vibrance',
+        min: -100,
+        max: 100,
+        step: 1,
+        format: (v) => v.toString(),
+      },
+      {
+        key: 'highlights',
+        label: 'Highlights',
+        min: -100,
+        max: 100,
+        step: 1,
+        format: (v) => v.toString(),
+      },
+      {
+        key: 'shadows',
+        label: 'Shadows',
+        min: -100,
+        max: 100,
+        step: 1,
+        format: (v) => v.toString(),
+      },
+      {
+        key: 'whites',
+        label: 'Whites',
+        min: -100,
+        max: 100,
+        step: 1,
+        format: (v) => v.toString(),
+      },
+      {
+        key: 'blacks',
+        label: 'Blacks',
+        min: -100,
+        max: 100,
+        step: 1,
+        format: (v) => v.toString(),
+      },
+    ],
+    temperature: [
+      {
+        key: 'temperature',
+        label: 'Temperature',
+        min: -50,
+        max: 50,
+        step: 1,
+        format: (v) => v.toString(),
+        icon: <WhiteBalanceIcon />,
+      },
+      {
+        key: 'tint',
+        label: 'Tint',
+        min: -50,
+        max: 50,
+        step: 1,
+        format: (v) => v.toString(),
+      },
+    ],
+    effects: [
+      {
+        key: 'sharpening',
+        label: 'Sharpening',
+        min: 0,
+        max: 100,
+        step: 1,
+        format: (v) => v.toString(),
+      },
+      {
+        key: 'grainAmount',
+        label: 'Grain',
+        min: 0,
+        max: 100,
+        step: 1,
+        format: (v) => v.toString(),
+        icon: <GrainIconSmall />,
+      },
+    ],
+  };
+
+  const handleSliderChange = (key: keyof ProcessingParams, value: number | null) => {
+    if (value === null) {
+      // Reset to default
+      setParams({ ...params, [key]: defaultParams[key] });
+    } else {
+      setParams({ ...params, [key]: value });
+    }
+  };
+
+  const handleReset = () => {
+    if (!srcImageData) return;
+    const mask = detectOrangeMask(
+      srcImageData.data,
+      srcImageData.width,
+      srcImageData.height
+    );
+    onReset({
+      ...defaultParams,
+      maskRed: Math.round(mask.r),
+      maskGreen: Math.round(mask.g),
+      maskBlue: Math.round(mask.b),
+    });
+  };
+
+  return (
+    <div className="space-y-4">
+      {/* Film Type */}
+      <div>
+        <SectionHeader icon="📽️" title="Film Type" />
+        <div className="grid grid-cols-2 gap-2 mt-2">
+          {(['color', 'bw'] as const).map((t) => (
+            <button
+              key={t}
+              onClick={() => setParams({ ...params, filmType: t })}
+              className={`py-2 px-3 rounded text-xs font-medium transition-all ${
+                params.filmType === t
+                  ? 'bg-amber-400 text-zinc-900'
+                  : 'bg-zinc-700 text-zinc-300 hover:bg-zinc-600'
+              }`}
+            >
+              {t === 'color' ? 'Color' : 'B&W'}
+            </button>
+          ))}
+        </div>
+      </div>
+
+      {/* Orange Mask */}
+      {params.filmType === 'color' && (
+        <div>
+          <SectionHeader icon="🎭" title="Orange Mask" />
+          <div className="mt-2 space-y-2">
+            {(
+              [
+                { key: 'maskRed' as const, label: 'Red' },
+                { key: 'maskGreen' as const, label: 'Green' },
+                { key: 'maskBlue' as const, label: 'Blue' },
+              ]
+            ).map(({ key, label }) => (
+              <SliderControl
+                key={key}
+                label={label}
+                value={params[key]}
+                min={0}
+                max={255}
+                step={1}
+                defaultValue={defaultParams[key]}
+                onChange={(v) => handleSliderChange(key, v)}
+                format={(v) => v.toString()}
+              />
+            ))}
+          </div>
+        </div>
+      )}
+
+      {/* Sections */}
+      {Object.entries(sliderSections).map(([section, sliders]) => (
+        <div key={section}>
+          <SectionHeader
+            icon={
+              section === 'exposure'
+                ? '☀️'
+                : section === 'tone'
+                  ? '🎨'
+                  : section === 'temperature'
+                    ? '🌡️'
+                    : '✨'
+            }
+            title={
+              section.charAt(0).toUpperCase() +
+              section.slice(1).replace(/([A-Z])/g, ' $1')
+            }
+          />
+          <div className="mt-2 space-y-2">
+            {sliders.map((slider) => (
+              <SliderControl
+                key={slider.key}
+                label={slider.label}
+                value={params[slider.key] as number}
+                min={slider.min}
+                max={slider.max}
+                step={slider.step}
+                defaultValue={defaultParams[slider.key] as number}
+                onChange={(v) => handleSliderChange(slider.key, v)}
+                format={slider.format}
+                icon={slider.icon}
+              />
+            ))}
+          </div>
+        </div>
+      ))}
+
+      {/* Film Presets */}
+      <div>
+        <SectionHeader icon="🎬" title="Film Stocks" />
+        <div className="mt-2 space-y-1">
+          {FILM_PROFILES.slice(0, 8).map((film) => (
+            <button
+              key={film.name}
+              onClick={() => {
+                const mask = {
+                  maskRed: params.maskRed,
+                  maskGreen: params.maskGreen,
+                  maskBlue: params.maskBlue,
+                };
+                setParams({
+                  ...defaultParams,
+                  ...film.params,
+                  ...mask,
+                } as ProcessingParams);
+              }}
+              disabled={!hasImage}
+              className="w-full text-left px-2 py-1.5 rounded text-xs bg-zinc-700 hover:bg-zinc-600 disabled:opacity-40 disabled:cursor-not-allowed transition-colors"
+            >
+              {film.name}
+            </button>
+          ))}
+        </div>
+      </div>
+
+      {/* Reset */}
+      {hasImage && (
+        <button
+          onClick={handleReset}
+          className="w-full py-2 px-3 rounded text-xs font-medium bg-zinc-700 hover:bg-zinc-600 text-zinc-300 transition-all flex items-center justify-center gap-2"
+        >
+          <ResetIcon />
+          Reset Settings
+        </button>
+      )}
     </div>
   );
 }
