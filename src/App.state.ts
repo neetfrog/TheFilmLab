@@ -1435,7 +1435,7 @@ export function useFilmLabState() {
     levelsGamma: levelsGamma ?? selectedPreset.levelsGamma ?? 1,
     levelsOutputBlack: levelsOutputBlack ?? selectedPreset.levelsOutputBlack ?? 0,
     levelsOutputWhite: levelsOutputWhite ?? selectedPreset.levelsOutputWhite ?? 1,
-  }), [grainAmount, grainSize, grainRoughness, vignetteAmount, halationAmount, contrastAmount, saturationAmount, brightnessAmount, fadedBlacks, purpleFringing, lensDistortion, colorShiftX, colorShiftY, whiteBalance, crossProcessAmount, pushPullAmount, levelsInputBlack, levelsInputWhite, levelsGamma, levelsOutputBlack, levelsOutputWhite, selectedPreset]);
+  }), [grainAmount, grainSize, grainRoughness, vignetteAmount, halationAmount, contrastAmount, saturationAmount, brightnessAmount, fadedBlacks, purpleFringing, lensDistortion, colorShiftX, colorShiftY, whiteBalance, tintAmount, crossProcessAmount, pushPullAmount, levelsInputBlack, levelsInputWhite, levelsGamma, levelsOutputBlack, levelsOutputWhite, selectedPreset]);
 
   const levelsHistogram = useMemo(() => {
     if (!imageData) return null;

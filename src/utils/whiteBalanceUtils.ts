@@ -14,19 +14,22 @@ const MIN_KELVIN = 2000;
 const MAX_KELVIN = 50000;
 const NEUTRAL_KELVIN = 6500;
 
+// Convert white balance (-1 to 1) to Kelvin for display
+// -1 = cold (50000K), 0 = neutral (6500K), 1 = warm (2000K)
 export function whiteBalanceToKelvin(value: number): number {
-  if (value >= 0) {
-    return Math.round(NEUTRAL_KELVIN - value * (NEUTRAL_KELVIN - MIN_KELVIN));
+  if (value <= 0) {
+    return Math.round(NEUTRAL_KELVIN + value * (MAX_KELVIN - NEUTRAL_KELVIN));
   }
-  return Math.round(NEUTRAL_KELVIN - value * (MAX_KELVIN - NEUTRAL_KELVIN));
+  return Math.round(NEUTRAL_KELVIN - value * (NEUTRAL_KELVIN - MIN_KELVIN));
 }
 
+// Convert Kelvin to white balance (-1 to 1)
 export function kelvinToWhiteBalance(kelvin: number): number {
   const clamped = Math.max(MIN_KELVIN, Math.min(MAX_KELVIN, kelvin));
   if (clamped >= NEUTRAL_KELVIN) {
-    return Math.max(-1, Math.min(1, (NEUTRAL_KELVIN - clamped) / (MAX_KELVIN - NEUTRAL_KELVIN)));
+    return Math.max(-1, Math.min(1, (clamped - NEUTRAL_KELVIN) / (MAX_KELVIN - NEUTRAL_KELVIN)));
   }
-  return Math.max(-1, Math.min(1, (NEUTRAL_KELVIN - clamped) / (NEUTRAL_KELVIN - MIN_KELVIN)));
+  return Math.max(-1, Math.min(1, -(NEUTRAL_KELVIN - clamped) / (NEUTRAL_KELVIN - MIN_KELVIN)));
 }
 
 export function kelvinFromRGB(r: number, g: number, b: number): number {

@@ -17,10 +17,13 @@ const clampByte = (value: number) => Math.max(0, Math.min(255, Math.round(value)
 const clampUnit = (value: number) => Math.max(0, Math.min(1, value));
 
 const applyExposureSoftKnee = (value: number) => {
-  const kneeStart = 220;
-  const kneeRange = 35;
+  // More aggressive compression to prevent clipping at high exposures
+  const kneeStart = 200;   // Start compression earlier
+  const kneeStrength = 25; // Maximum compression amount
   if (value <= kneeStart) return value;
-  return kneeStart + kneeRange * (1 - Math.exp(-(value - kneeStart) / 30));
+  // Logarithmic compression: gentler at first, stronger at extremes
+  const excess = Math.min(value - kneeStart, 100);
+  return kneeStart + kneeStrength * Math.log(1 + excess / 10);
 };
 
 const applyWhiteBalance = (whiteBalance: number, r: number, g: number, b: number) => {
