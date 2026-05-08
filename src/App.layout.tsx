@@ -37,7 +37,6 @@ import {
   WhiteBalanceIcon,
   ExposureIcon,
   ContrastIcon,
-  BrightnessIcon,
   SaturationIcon,
   FadedBlacksIcon,
   GrainIconSmall,
@@ -824,8 +823,6 @@ export default function AppLayout() {
                   defaultValue={0} onChange={(v) => setExposure(v ?? 0)} format={(v) => `${v > 0 ? '+' : ''}${v.toFixed(2)} EV`} icon={<ExposureIcon />} />
                 <SliderControl label="Contrast" value={eff.contrast} min={-0.5} max={0.5} step={0.01}
                   defaultValue={selectedPreset.contrast} onChange={setContrastAmount} format={(v) => `${v > 0 ? '+' : ''}${(v * 100).toFixed(0)}`} icon={<ContrastIcon />} />
-                <SliderControl label="Brightness" value={eff.brightness} min={-0.3} max={0.3} step={0.01}
-                  defaultValue={selectedPreset.brightness} onChange={setBrightnessAmount} format={(v) => `${v > 0 ? '+' : ''}${(v * 100).toFixed(0)}`} icon={<BrightnessIcon />} />
                 <SliderControl label="Saturation" value={eff.saturation} min={0} max={2} step={0.01}
                   defaultValue={selectedPreset.saturation} onChange={setSaturationAmount} format={(v) => `${(v * 100).toFixed(0)}%`} icon={<SaturationIcon />} />
                 <SliderControl label="Cross Process" value={eff.crossProcess} min={-1} max={1} step={0.05}
@@ -870,6 +867,7 @@ export default function AppLayout() {
                     activeChannel={curveChannel}
                     setActiveChannel={setCurveChannel}
                     curves={{ r: curvePointsR, g: curvePointsG, b: curvePointsB, master: curvePointsMaster }}
+                    histogram={levelsHistogram}
                     onCurveChange={handleCurveChange}
                   />
                 </div>

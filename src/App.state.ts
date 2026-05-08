@@ -144,6 +144,7 @@ export function useFilmLabState() {
     ] as [number, number]),
   );
   const [processedImageData, setProcessedImageData] = useState<ImageData | null>(null);
+  const [histogramProcessedImageData, setHistogramProcessedImageData] = useState<ImageData | null>(null);
 
   const canvasRef = useRef<HTMLCanvasElement>(null);
   const originalCanvasRef = useRef<HTMLCanvasElement>(null);
@@ -230,6 +231,35 @@ export function useFilmLabState() {
     crossProcessOverride: crossProcessAmount ?? undefined,
     pushPullOverride: pushPullAmount ?? undefined,
   }), [grainAmount, grainSize, grainRoughness, vignetteAmount, halationAmount, contrastAmount, saturationAmount, brightnessAmount, fadedBlacks, exposure, purpleFringing, lensDistortion, colorShiftX, colorShiftY, whiteBalance, wbMultipliers, tintAmount, crossProcessAmount, pushPullAmount, levelsInputBlack, levelsInputWhite, levelsGamma, levelsOutputBlack, levelsOutputWhite]);
+
+  // Params for histogram - same as current but with neutral levels (levels don't affect histogram)
+  const histogramParams: ProcessingParams = useMemo(() => ({
+    grainAmountOverride: grainAmount ?? undefined,
+    grainSizeOverride: grainSize ?? undefined,
+    grainRoughnessOverride: grainRoughness ?? undefined,
+    vignetteOverride: vignetteAmount ?? undefined,
+    halationOverride: halationAmount ?? undefined,
+    contrastOverride: contrastAmount ?? undefined,
+    saturationOverride: saturationAmount ?? undefined,
+    brightnessOverride: brightnessAmount ?? undefined,
+    fadedBlacksOverride: fadedBlacks ?? undefined,
+    exposureCompensation: exposure,
+    purpleFringingOverride: purpleFringing ?? undefined,
+    lensDistortionOverride: lensDistortion ?? undefined,
+    colorShiftXOverride: colorShiftX ?? undefined,
+    colorShiftYOverride: colorShiftY ?? undefined,
+    whiteBalanceOverride: whiteBalance ?? undefined,
+    wbMultipliers: wbMultipliers ?? undefined,
+    tintOverride: tintAmount ?? undefined,
+    // Neutral levels - don't affect histogram
+    levelsInputBlackOverride: 0,
+    levelsInputWhiteOverride: 1,
+    levelsGammaOverride: 1,
+    levelsOutputBlackOverride: 0,
+    levelsOutputWhiteOverride: 1,
+    crossProcessOverride: crossProcessAmount ?? undefined,
+    pushPullOverride: pushPullAmount ?? undefined,
+  }), [grainAmount, grainSize, grainRoughness, vignetteAmount, halationAmount, contrastAmount, saturationAmount, brightnessAmount, fadedBlacks, exposure, purpleFringing, lensDistortion, colorShiftX, colorShiftY, whiteBalance, wbMultipliers, tintAmount, crossProcessAmount, pushPullAmount]);
 
   const currentPreset = useMemo(() => ({
     ...selectedPreset,
@@ -359,6 +389,23 @@ export function useFilmLabState() {
       if (processTimeoutRef.current) clearTimeout(processTimeoutRef.current);
     };
   }, [imageData, previewImageData, currentPreset, currentParams, grainSeed, processImageInWorker]);
+
+  // Separate effect to compute histogram processed image (with neutral levels)
+  useEffect(() => {
+    if (!imageData || !workerRef.current) return;
+
+    const computeHistogramImage = async () => {
+      try {
+        const source = previewImageData ?? imageData;
+        const result = await processImageInWorker(source, currentPreset, histogramParams, grainSeed);
+        setHistogramProcessedImageData(result);
+      } catch (error) {
+        console.error('Histogram image processing failed', error);
+      }
+    };
+
+    computeHistogramImage();
+  }, [imageData, previewImageData, currentPreset, histogramParams, grainSeed, processImageInWorker]);
 
   const drawCanvasOverlays = useCallback((ctx: CanvasRenderingContext2D, width: number, height: number) => {
     if (selectedOverlays.length === 0 || overlayImgRef.current.length === 0) return;
@@ -1439,7 +1486,8 @@ export function useFilmLabState() {
 
   const levelsHistogram = useMemo(() => {
     if (!imageData) return null;
-    const sourceImage = processedImageData ?? imageData;
+    // Use the histogram processed image (all effects except levels)
+    const sourceImage = histogramProcessedImageData ?? imageData;
     const buffer = new Uint32Array(256);
     const data = sourceImage.data;
     const pixelCount = data.length / 4;
@@ -1453,7 +1501,7 @@ export function useFilmLabState() {
       buffer[lum]++;
     }
     return buffer;
-  }, [imageData, processedImageData]);
+  }, [imageData, histogramProcessedImageData]);
 
   const handleSaveCustomPreset = useCallback(() => {
     const name = customPresetName.trim() || `${selectedPreset.name} Custom`;

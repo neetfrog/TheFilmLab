@@ -8,6 +8,10 @@ function LevelsHistogram({
   onInputBlackChange,
   onInputWhiteChange,
   onGammaChange,
+  showMarkers = true,
+  showLabels = true,
+  showBackground = true,
+  showTrack = true,
 }: {
   histogram: Uint32Array | null;
   inputBlack: number;
@@ -16,6 +20,10 @@ function LevelsHistogram({
   onInputBlackChange: (value: number | null) => void;
   onInputWhiteChange: (value: number | null) => void;
   onGammaChange: (value: number | null) => void;
+  showMarkers?: boolean;
+  showLabels?: boolean;
+  showBackground?: boolean;
+  showTrack?: boolean;
 }) {
   const canvasRef = useRef<HTMLCanvasElement>(null);
   const canvasWrapperRef = useRef<HTMLDivElement>(null);
@@ -149,14 +157,15 @@ function LevelsHistogram({
         <div ref={canvasWrapperRef} className="relative h-20 rounded-lg overflow-hidden bg-zinc-900">
           <canvas ref={canvasRef} className="w-full h-full" />
         </div>
-        <div ref={histogramRef} className="relative mt-2 h-6 rounded-lg overflow-hidden bg-zinc-900">
-          <div className="absolute inset-0 bg-gradient-to-r from-black via-zinc-800 to-white opacity-90" />
-          {['inputBlack', 'gamma', 'inputWhite'].map((marker) => {
-            const position = marker === 'inputBlack'
-              ? inputBlack
-              : marker === 'inputWhite'
-                ? inputWhite
-                : gammaToPosition(gamma);
+        {showTrack && (
+          <div ref={histogramRef} className="relative mt-2 h-6 rounded-lg overflow-hidden bg-zinc-900">
+            {showBackground && <div className="absolute inset-0 bg-gradient-to-r from-black via-zinc-800 to-white opacity-90" />}
+            {showMarkers && ['inputBlack', 'gamma', 'inputWhite'].map((marker) => {
+              const position = marker === 'inputBlack'
+                ? inputBlack
+                : marker === 'inputWhite'
+                  ? inputWhite
+                  : gammaToPosition(gamma);
             const lineColor = marker === 'gamma' ? 'bg-sky-400' : 'bg-amber-400';
             const handleColor = marker === 'gamma' ? 'bg-sky-400' : 'bg-amber-400';
             const left = `${clamp(position) * 100}%`;
@@ -172,12 +181,15 @@ function LevelsHistogram({
               </div>
             );
           })}
-        </div>
-        <div className="mt-2 grid grid-cols-3 gap-2 text-[10px] text-zinc-500">
-          <span className="whitespace-nowrap">Blacks: {Math.round(inputBlack * 255)}</span>
-          <span className="text-center whitespace-nowrap">Mids: {gamma.toFixed(2)}</span>
-          <span className="text-right whitespace-nowrap">Highs: {Math.round(inputWhite * 255)}</span>
-        </div>
+          </div>
+        )}
+        {showLabels && (
+          <div className="mt-2 grid grid-cols-3 gap-2 text-[10px] text-zinc-500">
+            <span className="whitespace-nowrap">Blacks: {Math.round(inputBlack * 255)}</span>
+            <span className="text-center whitespace-nowrap">Mids: {gamma.toFixed(2)}</span>
+            <span className="text-right whitespace-nowrap">Highs: {Math.round(inputWhite * 255)}</span>
+          </div>
+        )}
       </div>
     </div>
   );

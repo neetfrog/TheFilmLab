@@ -1,4 +1,5 @@
 import { useCallback, useEffect, useRef, type PointerEvent } from 'react';
+import LevelsHistogram from './LevelsHistogram';
 
 type CurveChannel = 'master' | 'r' | 'g' | 'b';
 
@@ -29,11 +30,13 @@ export default function CurvesEditor({
   activeChannel,
   setActiveChannel,
   curves,
+  histogram,
   onCurveChange,
 }: {
   activeChannel: CurveChannel;
   setActiveChannel: (channel: CurveChannel) => void;
   curves: Curves;
+  histogram?: Uint32Array | null;
   onCurveChange: (channel: CurveChannel, points: [number, number][]) => void;
 }) {
   const svgRef = useRef<SVGSVGElement | null>(null);
@@ -45,6 +48,10 @@ export default function CurvesEditor({
   const padding = 12;
   const size = 240;
   const innerSize = size - padding * 2;
+
+  const histogramBars = histogram && histogram.length > 0 ? histogram : null;
+  const histogramMax = histogramBars ? Math.max(1, ...histogramBars) : 1;
+  const barWidth = histogramBars ? innerSize / histogramBars.length : 0;
 
   const getPointData = useCallback((points: [number, number][]) =>
     points.map(([x, y]) => `${padding + x * innerSize},${padding + (1 - y) * innerSize}`).join(' '),
@@ -120,6 +127,22 @@ export default function CurvesEditor({
         <div className="relative rounded-2xl bg-zinc-900 overflow-hidden aspect-square border border-zinc-800">
           <svg ref={svgRef} viewBox="0 0 240 240" className="w-full h-full touch-none">
             <rect x="0" y="0" width="240" height="240" fill="#0f172a" />
+            {histogramBars && histogramBars.map((value, index) => {
+              const x = padding + index * barWidth;
+              const height = (value / histogramMax) * innerSize;
+              return (
+                <rect
+                  key={index}
+                  x={x}
+                  y={padding + innerSize - height}
+                  width={Math.max(0.5, barWidth)}
+                  height={height}
+                  fill="rgba(148,163,184,0.35)"
+                  stroke="rgba(148,163,184,0.14)"
+                  strokeWidth="0.1"
+                />
+              );
+            })}
             {[0.2, 0.4, 0.6, 0.8].map((value) => {
               const pos = padding + value * innerSize;
               return (
@@ -159,6 +182,21 @@ export default function CurvesEditor({
             ))}
             <path d={`M${padding},${padding + innerSize} L${padding + innerSize},${padding}`} stroke="rgba(148,163,184,0.2)" strokeWidth="1" />
           </svg>
+        </div>
+        <div className="mt-3 pointer-events-none">
+          <LevelsHistogram
+            histogram={histogram}
+            inputBlack={0}
+            inputWhite={1}
+            gamma={1}
+            onInputBlackChange={() => undefined}
+            onInputWhiteChange={() => undefined}
+            onGammaChange={() => undefined}
+            showMarkers={false}
+            showLabels={false}
+            showBackground={false}
+            showTrack={false}
+          />
         </div>
       </div>
     </div>
