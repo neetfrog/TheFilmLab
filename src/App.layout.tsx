@@ -6,6 +6,26 @@ import LevelsHistogram from './components/LevelsHistogram';
 import CurvesEditor from './components/CurvesEditor';
 import { useFilmLabState } from './App.state';
 import { getImageAcceptAttribute } from './utils/imageDecoder';
+import { filmPresets } from './filmPresets';
+
+const MIN_KELVIN = 2000;
+const MAX_KELVIN = 50000;
+const NEUTRAL_KELVIN = 6500;
+
+const whiteBalanceToKelvin = (value: number) => {
+  if (value >= 0) {
+    return Math.round(NEUTRAL_KELVIN - value * (NEUTRAL_KELVIN - MIN_KELVIN));
+  }
+  return Math.round(NEUTRAL_KELVIN - value * (MAX_KELVIN - NEUTRAL_KELVIN));
+};
+
+const kelvinToWhiteBalance = (kelvin: number) => {
+  const clamped = Math.max(MIN_KELVIN, Math.min(MAX_KELVIN, kelvin));
+  if (clamped >= NEUTRAL_KELVIN) {
+    return Math.max(-1, Math.min(1, (NEUTRAL_KELVIN - clamped) / (MAX_KELVIN - NEUTRAL_KELVIN)));
+  }
+  return Math.max(-1, Math.min(1, (NEUTRAL_KELVIN - clamped) / (NEUTRAL_KELVIN - MIN_KELVIN)));
+};
 import {
   typeLabels,
   typeColors,
@@ -111,6 +131,30 @@ export default function AppLayout() {
     window.removeEventListener('pointermove', onMobileResizeMove);
     window.removeEventListener('pointerup', stopResize);
   }, [onResizeMove, onMobileResizeMove]);
+
+  const handleNegativeFileSelected = useCallback((file: File, imageData: ImageData) => {
+    // Create URL for preview
+    const canvas = document.createElement('canvas');
+    canvas.width = imageData.width;
+    canvas.height = imageData.height;
+    canvas.getContext('2d')!.putImageData(imageData, 0, 0);
+    const url = canvas.toDataURL('image/jpeg', 0.95);
+
+    // Set as active image
+    const img = new Image();
+    img.src = url;
+    state.setImage(img);
+    state.setImageData(imageData);
+
+    // Auto-apply the invert negative utility preset when importing through the negative dialog
+    const invertPreset = filmPresets.find((preset) => preset.id === 'invert-negative');
+    if (invertPreset) {
+      state.selectPreset(invertPreset);
+    }
+
+    // Enter crop mode automatically for negative imports
+    state.setCropMode(true);
+  }, [state]);
 
   const handleResizePointerDown = (event: ReactPointerEvent<HTMLDivElement>) => {
     if (isMobile) return;
@@ -242,6 +286,12 @@ export default function AppLayout() {
     setColorShiftX,
     setColorShiftY,
     setWhiteBalance,
+    setTintAmount,
+    wbPickerActive,
+    setWbPickerActive,
+    wbMultipliers,
+    handleWbPickerClick,
+    handleWhiteBalanceChange,
     setLevelsInputBlack,
     setLevelsInputWhite,
     setLevelsGamma,
@@ -766,8 +816,23 @@ export default function AppLayout() {
               </div>
               <div className={`overflow-hidden transition-all duration-200 ease-out origin-top ${openSections.tone ? 'max-h-screen opacity-100 scale-y-100' : 'max-h-0 opacity-0 scale-y-95'}`}>
                 <div className="px-3 pb-2 space-y-1.5">
-                <SliderControl label="White Balance" value={eff.whiteBalance} min={-1} max={1} step={0.05}
-                  defaultValue={selectedPreset.whiteBalance} onChange={setWhiteBalance} format={(v) => v > 0 ? `+${(v * 100).toFixed(0)}% Warm` : v < 0 ? `${(v * 100).toFixed(0)}% Cool` : 'Neutral'} icon={<WhiteBalanceIcon />} />
+                {image && (
+                  <button
+                    type="button"
+                    onClick={() => setWbPickerActive(!wbPickerActive)}
+                    className={`w-full py-1.5 px-3 rounded-lg text-xs font-medium transition-all ${
+                      wbPickerActive
+                        ? 'bg-amber-500 text-zinc-950 border border-amber-400'
+                        : 'bg-zinc-800/60 text-zinc-200 border border-zinc-700/50 hover:border-amber-500/50 hover:bg-zinc-800'
+                    }`}
+                  >
+                    {wbPickerActive ? '🎯 Click image to set WB' : '🎯 Pick White Balance'}
+                  </button>
+                )}
+                <SliderControl label="White Balance" value={whiteBalanceToKelvin(eff.whiteBalance)} min={MIN_KELVIN} max={MAX_KELVIN} step={100}
+                  defaultValue={whiteBalanceToKelvin(selectedPreset.whiteBalance)} onChange={(value) => setWhiteBalance(value === null ? null : kelvinToWhiteBalance(value))} format={(v) => `${Math.round(v ?? NEUTRAL_KELVIN)}K`} icon={<WhiteBalanceIcon />} />
+                <SliderControl label="Tint" value={eff.tint} min={-150} max={150} step={1}
+                  defaultValue={selectedPreset.tint ?? 0} onChange={setTintAmount} format={(v) => v > 0 ? `+${Math.round(v)} Magenta` : v < 0 ? `${Math.round(v)} Green` : 'Neutral'} icon={<ColorShiftIcon />} />
                 <SliderControl label="Exposure" value={exposure} min={-2} max={2} step={0.05}
                   defaultValue={0} onChange={(v) => setExposure(v ?? 0)} format={(v) => `${v > 0 ? '+' : ''}${v.toFixed(1)} EV`} icon={<ExposureIcon />} />
                 <SliderControl label="Contrast" value={eff.contrast} min={-0.5} max={0.5} step={0.01}
@@ -1117,7 +1182,11 @@ export default function AppLayout() {
         </aside>
 
         <FramingTool isOpen={framingToolOpen} onClose={() => setFramingToolOpen(false)} />
-        <NegativeConverterTool isOpen={negativeConverterToolOpen} onClose={() => setNegativeConverterToolOpen(false)} />
+        <NegativeConverterTool 
+          isOpen={negativeConverterToolOpen} 
+          onClose={() => setNegativeConverterToolOpen(false)}
+          onFileSelected={handleNegativeFileSelected}
+        />
 
         {sidebarOpen && (
           <div
@@ -1262,6 +1331,8 @@ export default function AppLayout() {
                   <div className="relative inline-block w-auto max-w-full overflow-visible">
                     <canvas
                       ref={canvasRef}
+                      onClick={handleWbPickerClick}
+                      data-ignore-pan={wbPickerActive ? 'true' : undefined}
                       className="block shadow-2xl opacity-100"
                       style={{
                         imageRendering: 'auto',
@@ -1272,6 +1343,7 @@ export default function AppLayout() {
                         maxHeight: '100%',
                         display: 'block',
                         touchAction: 'none',
+                        cursor: wbPickerActive ? 'crosshair' : 'auto',
                       }}
                     />
                     {cropMode && cropRect && (

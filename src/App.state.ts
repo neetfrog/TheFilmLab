@@ -1,4 +1,5 @@
 import { useState, useRef, useCallback, useEffect, useMemo, useLayoutEffect } from 'react';
+import { calculateNeutralWB, kelvinToWhiteBalance, kelvinFromRGB, sampleRegion } from './utils/whiteBalanceUtils';
 import { filmPresets } from './filmPresets';
 import { decodeImage } from './utils/imageDecoder';
 import {
@@ -117,7 +118,15 @@ export function useFilmLabState() {
   const [colorShiftX, setColorShiftX] = useState<number | null>(null);
   const [colorShiftY, setColorShiftY] = useState<number | null>(null);
   const [whiteBalance, setWhiteBalance] = useState<number | null>(null);
+  const [wbPickerActive, setWbPickerActive] = useState(false);
+  const [wbMultipliers, setWbMultipliers] = useState<{ r: number; g: number; b: number } | null>(null);
+  const [tintAmount, setTintAmount] = useState<number | null>(null);
   const [crossProcessAmount, setCrossProcessAmount] = useState<number | null>(null);
+  const handleWhiteBalanceChange = useCallback((value: number | null) => {
+    setWhiteBalance(value);
+    setWbMultipliers(null);
+  }, []);
+
   const [pushPullAmount, setPushPullAmount] = useState<number | null>(null);
   const [levelsInputBlack, setLevelsInputBlack] = useState<number | null>(null);
   const [levelsInputWhite, setLevelsInputWhite] = useState<number | null>(null);
@@ -211,6 +220,8 @@ export function useFilmLabState() {
     colorShiftXOverride: colorShiftX ?? undefined,
     colorShiftYOverride: colorShiftY ?? undefined,
     whiteBalanceOverride: whiteBalance ?? undefined,
+    wbMultipliers: wbMultipliers ?? undefined,
+    tintOverride: tintAmount ?? undefined,
     levelsInputBlackOverride: levelsInputBlack ?? undefined,
     levelsInputWhiteOverride: levelsInputWhite ?? undefined,
     levelsGammaOverride: levelsGamma ?? undefined,
@@ -218,7 +229,7 @@ export function useFilmLabState() {
     levelsOutputWhiteOverride: levelsOutputWhite ?? undefined,
     crossProcessOverride: crossProcessAmount ?? undefined,
     pushPullOverride: pushPullAmount ?? undefined,
-  }), [grainAmount, grainSize, grainRoughness, vignetteAmount, halationAmount, contrastAmount, saturationAmount, brightnessAmount, fadedBlacks, exposure, purpleFringing, lensDistortion, colorShiftX, colorShiftY, whiteBalance, crossProcessAmount, pushPullAmount, levelsInputBlack, levelsInputWhite, levelsGamma, levelsOutputBlack, levelsOutputWhite]);
+  }), [grainAmount, grainSize, grainRoughness, vignetteAmount, halationAmount, contrastAmount, saturationAmount, brightnessAmount, fadedBlacks, exposure, purpleFringing, lensDistortion, colorShiftX, colorShiftY, whiteBalance, wbMultipliers, tintAmount, crossProcessAmount, pushPullAmount, levelsInputBlack, levelsInputWhite, levelsGamma, levelsOutputBlack, levelsOutputWhite]);
 
   const currentPreset = useMemo(() => ({
     ...selectedPreset,
@@ -1276,6 +1287,8 @@ export function useFilmLabState() {
     setColorShiftX(null);
     setColorShiftY(null);
     setWhiteBalance(null);
+    setWbMultipliers(null);
+    setTintAmount(null);
     setCrossProcessAmount(null);
     setPushPullAmount(null);
     setLevelsInputBlack(null);
@@ -1319,6 +1332,29 @@ export function useFilmLabState() {
       paper: 1,
     });
   }, [selectedPreset.curves]);
+
+  const handleWbPickerClick = useCallback((event: React.MouseEvent<HTMLCanvasElement>) => {
+    if (!wbPickerActive || !imageData || !canvasRef.current) return;
+
+    const canvas = canvasRef.current;
+    const rect = canvas.getBoundingClientRect();
+    const x = (event.clientX - rect.left) / (rect.width / canvas.width);
+    const y = (event.clientY - rect.top) / (rect.height / canvas.height);
+
+    // Sample a region around the click to reduce noise
+    const [r, g, b] = sampleRegion(imageData, x, y, 3);
+
+    // Calculate WB multipliers from the sample
+    const multipliers = calculateNeutralWB(r, g, b);
+    setWbMultipliers(multipliers);
+
+    // Estimate a slider position in kelvin and update the UI
+    const kelvin = kelvinFromRGB(r, g, b);
+    setWhiteBalance(kelvinToWhiteBalance(kelvin));
+
+    // Exit picker mode
+    setWbPickerActive(false);
+  }, [wbPickerActive, imageData, setWhiteBalance, setWbMultipliers]);
 
   const customPresetItems = useMemo(() => customPresets.filter((preset) => {
     if (showFavoritesOnly && !favorites.includes(preset.id)) return false;
@@ -1391,6 +1427,7 @@ export function useFilmLabState() {
     colorShiftX: colorShiftX ?? selectedPreset.colorShiftX,
     colorShiftY: colorShiftY ?? selectedPreset.colorShiftY,
     whiteBalance: whiteBalance ?? selectedPreset.whiteBalance,
+    tint: tintAmount ?? selectedPreset.tint ?? 0,
     crossProcess: crossProcessAmount ?? selectedPreset.crossProcess ?? 0,
     pushPull: pushPullAmount ?? selectedPreset.pushPull ?? 0,
     levelsInputBlack: levelsInputBlack ?? selectedPreset.levelsInputBlack ?? 0,
@@ -1539,6 +1576,12 @@ const curveOverridesExist = useMemo(() => {
     colorShiftX,
     colorShiftY,
     whiteBalance,
+    wbPickerActive,
+    setWbPickerActive,
+    wbMultipliers,
+    setWbMultipliers,
+    handleWbPickerClick,
+    handleWhiteBalanceChange,
     crossProcessAmount,
     pushPullAmount,
     levelsInputBlack,
@@ -1603,6 +1646,7 @@ const curveOverridesExist = useMemo(() => {
     setColorShiftX,
     setColorShiftY,
     setWhiteBalance,
+    setTintAmount,
     setCrossProcessAmount,
     setPushPullAmount,
     setLevelsInputBlack,

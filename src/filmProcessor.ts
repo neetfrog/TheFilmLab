@@ -16,6 +16,13 @@ function getLUTCacheKey(prefix: string, values: Array<number | string>) {
 const clampByte = (value: number) => Math.max(0, Math.min(255, Math.round(value)));
 const clampUnit = (value: number) => Math.max(0, Math.min(1, value));
 
+const applyExposureSoftKnee = (value: number) => {
+  const kneeStart = 220;
+  const kneeRange = 35;
+  if (value <= kneeStart) return value;
+  return kneeStart + kneeRange * (1 - Math.exp(-(value - kneeStart) / 30));
+};
+
 const applyWhiteBalance = (whiteBalance: number, r: number, g: number, b: number) => {
   if (whiteBalance === 0) return [r, g, b];
   const amount = Math.abs(whiteBalance) * 0.3;
@@ -30,6 +37,14 @@ const applyWhiteBalance = (whiteBalance: number, r: number, g: number, b: number
         clampByte(g * (1 - amount * 0.3)),
         clampByte(b * (1 + amount)),
       ];
+};
+
+const applyWBMultipliers = (r: number, g: number, b: number, multipliers: { r: number; g: number; b: number }) => {
+  return [
+    clampByte(r * multipliers.r),
+    clampByte(g * multipliers.g),
+    clampByte(b * multipliers.b),
+  ];
 };
 
 // Fast cubic interpolation for curve points
@@ -185,6 +200,8 @@ export interface ProcessingParams {
   colorShiftXOverride?: number;
   colorShiftYOverride?: number;
   whiteBalanceOverride?: number;
+  tintOverride?: number;
+  wbMultipliers?: { r: number; g: number; b: number };
   crossProcessOverride?: number;
   pushPullOverride?: number;
   levelsInputBlackOverride?: number;
@@ -249,6 +266,8 @@ export function processImage(
   const colorShiftX = params.colorShiftXOverride ?? preset.colorShiftX;
   const colorShiftY = params.colorShiftYOverride ?? preset.colorShiftY;
   const whiteBalance = params.whiteBalanceOverride ?? preset.whiteBalance;
+  const tint = params.tintOverride ?? preset.tint ?? 0;
+  const wbMultipliers = params.wbMultipliers;
   const crossProcess = params.crossProcessOverride ?? 0;
   const pushPull = params.pushPullOverride ?? 0;
   const levelsInputBlack = params.levelsInputBlackOverride ?? preset.levelsInputBlack ?? 0;
@@ -269,6 +288,7 @@ export function processImage(
   const brightnessBias = brightness * 40;
   const satInv = saturation !== 1.0;
   const hasBalance = whiteBalance !== 0;
+  const hasWbMultipliers = wbMultipliers !== null && wbMultipliers !== undefined;
   const clamp = clampByte;
 
   // Process pixels with optimized loop
@@ -283,13 +303,23 @@ export function processImage(
     let b = data[i + 2];
 
     if (exposure !== 0 || brightnessBias !== 0) {
-      r = clamp(r * exposureMult + brightnessBias);
-      g = clamp(g * exposureMult + brightnessBias);
-      b = clamp(b * exposureMult + brightnessBias);
+      r = clamp(applyExposureSoftKnee(r * exposureMult + brightnessBias));
+      g = clamp(applyExposureSoftKnee(g * exposureMult + brightnessBias));
+      b = clamp(applyExposureSoftKnee(b * exposureMult + brightnessBias));
     }
 
-    if (hasBalance) {
+    // Apply neutral-point WB multipliers (highest priority, applied early)
+    if (hasWbMultipliers && wbMultipliers) {
+      [r, g, b] = applyWBMultipliers(r, g, b, wbMultipliers);
+    } else if (hasBalance) {
       [r, g, b] = applyWhiteBalance(whiteBalance, r, g, b);
+    }
+
+    if (tint !== 0) {
+      const tintAdjustment = tint * 0.2;
+      r = clamp(r + tintAdjustment * 0.5);
+      g = clamp(g - tintAdjustment);
+      b = clamp(b + tintAdjustment * 0.5);
     }
 
     const ri = levelsLUT[clamp(r)];
