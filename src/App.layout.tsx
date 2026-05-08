@@ -6,26 +6,13 @@ import LevelsHistogram from './components/LevelsHistogram';
 import CurvesEditor from './components/CurvesEditor';
 import { useFilmLabState } from './App.state';
 import { getImageAcceptAttribute } from './utils/imageDecoder';
+import { whiteBalanceToKelvin } from './utils/whiteBalanceUtils';
 import { filmPresets } from './filmPresets';
 
 const MIN_KELVIN = 2000;
 const MAX_KELVIN = 50000;
 const NEUTRAL_KELVIN = 6500;
 
-const whiteBalanceToKelvin = (value: number) => {
-  if (value >= 0) {
-    return Math.round(NEUTRAL_KELVIN - value * (NEUTRAL_KELVIN - MIN_KELVIN));
-  }
-  return Math.round(NEUTRAL_KELVIN - value * (MAX_KELVIN - NEUTRAL_KELVIN));
-};
-
-const kelvinToWhiteBalance = (kelvin: number) => {
-  const clamped = Math.max(MIN_KELVIN, Math.min(MAX_KELVIN, kelvin));
-  if (clamped >= NEUTRAL_KELVIN) {
-    return Math.max(-1, Math.min(1, (NEUTRAL_KELVIN - clamped) / (MAX_KELVIN - NEUTRAL_KELVIN)));
-  }
-  return Math.max(-1, Math.min(1, (NEUTRAL_KELVIN - clamped) / (NEUTRAL_KELVIN - MIN_KELVIN)));
-};
 import {
   typeLabels,
   typeColors,
@@ -829,8 +816,8 @@ export default function AppLayout() {
                     {wbPickerActive ? '🎯 Click image to set WB' : '🎯 Pick White Balance'}
                   </button>
                 )}
-                <SliderControl label="White Balance" value={whiteBalanceToKelvin(eff.whiteBalance)} min={MIN_KELVIN} max={MAX_KELVIN} step={100}
-                  defaultValue={whiteBalanceToKelvin(selectedPreset.whiteBalance)} onChange={(value) => setWhiteBalance(value === null ? null : kelvinToWhiteBalance(value))} format={(v) => `${Math.round(v ?? NEUTRAL_KELVIN)}K`} icon={<WhiteBalanceIcon />} />
+                <SliderControl label="White Balance" value={eff.whiteBalance} min={-1} max={1} step={0.01}
+                  defaultValue={selectedPreset.whiteBalance ?? 0} onChange={handleWhiteBalanceChange} format={(v) => `${Math.round(whiteBalanceToKelvin(v))}K`} icon={<WhiteBalanceIcon />} />
                 <SliderControl label="Tint" value={eff.tint} min={-150} max={150} step={1}
                   defaultValue={selectedPreset.tint ?? 0} onChange={setTintAmount} format={(v) => v > 0 ? `+${Math.round(v)} Magenta` : v < 0 ? `${Math.round(v)} Green` : 'Neutral'} icon={<ColorShiftIcon />} />
                 <SliderControl label="Exposure" value={exposure} min={-2} max={2} step={0.05}
