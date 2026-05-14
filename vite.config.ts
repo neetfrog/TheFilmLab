@@ -22,4 +22,7 @@ export default defineConfig({
   define: {
     'process.env.VITE_IS_ELECTRON': process.env.VITE_IS_ELECTRON ? 'true' : 'false',
   },
+  build: {
+    outDir: 'dist/web',
+  },
 });

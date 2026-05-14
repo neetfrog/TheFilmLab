@@ -16,21 +16,21 @@ export default defineConfig({
     exclude: ["electron"],
   },
   build: {
-    target: "esnext",
+    target: "node20",
     lib: {
       entry: {
         main: path.resolve(__dirname, "electron/main.ts"),
         preload: path.resolve(__dirname, "electron/preload.ts"),
       },
       name: "TheFilmLab",
-      formats: ["es"],
+      formats: ["cjs"],
     },
     rollupOptions: {
       external: ["electron", "path", "url", "fs"],
       output: {
         dir: "dist/electron",
-        format: "es",
-        entryFileNames: "[name].js",
+        format: "cjs",
+        entryFileNames: "[name].cjs",
       },
     },
     minify: false,

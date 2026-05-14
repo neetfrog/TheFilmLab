@@ -11,8 +11,8 @@
     "build:web": "vite build --outDir=dist/web",
     "build:electron": "vite build --config vite.electron.config.ts",
     "build:all": "npm run build:web && npm run build:electron",
-    "electron:dev": "npm run build:electron && electron .",
-    "electron:preview": "electron .",
+    "electron:dev": "npm run build:all && cross-env NODE_ENV=production electron .",
+    "electron:preview": "cross-env NODE_ENV=production electron .",
     "dist": "npm run build:electron && electron-builder",
     "dist:win": "npm run build:electron && electron-builder --win",
     "dist:portable": "npm run build:electron && electron-builder --win --portable",
@@ -42,7 +42,7 @@
     "vite": "7.2.4",
     "vite-plugin-singlefile": "2.3.0"
   },
-  "main": "electron/main.js",
+  "main": "dist/electron/main.cjs",
   "build": {
     "appId": "com.thefilmlab.app",
     "productName": "TheFilmLab",

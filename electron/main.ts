@@ -1,11 +1,7 @@
-import { app, BrowserWindow, Menu } from 'electron';
-import path from 'path';
-import { fileURLToPath } from 'url';
+const { app, BrowserWindow, Menu, shell } = require('electron');
+const path = require('path');
 
-const __filename = fileURLToPath(import.meta.url);
-const __dirname = path.dirname(__filename);
-
-const isDev = process.env.NODE_ENV === 'development' || !app.isPackaged;
+const isDev = process.env.NODE_ENV === 'development';
 
 let mainWindow: BrowserWindow | null = null;
 
@@ -19,7 +15,7 @@ const createWindow = () => {
       nodeIntegration: false,
       contextIsolation: true,
       enableRemoteModule: false,
-      preload: path.join(__dirname, 'preload.js'),
+      preload: path.join(__dirname, 'preload.cjs'),
     },
     icon: path.join(__dirname, '../assets/icons/icon.png'),
   });
@@ -81,8 +77,7 @@ const createMenu = () => {
       submenu: [
         {
           label: 'GitHub Repository',
-          click: async () => {
-            const { shell } = await import('electron');
+          click: () => {
             shell.openExternal('https://github.com/yourusername/thefilmlab');
           },
         },
