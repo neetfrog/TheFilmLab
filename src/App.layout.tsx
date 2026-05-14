@@ -4,6 +4,7 @@ import SectionHeader from './components/SectionHeader';
 import SliderControl from './components/SliderControl';
 import LevelsHistogram from './components/LevelsHistogram';
 import CurvesEditor from './components/CurvesEditor';
+import DesktopDownloadBanner from './components/DesktopDownloadBanner';
 import { useFilmLabState } from './App.state';
 import { getImageAcceptAttribute } from './utils/imageDecoder';
 import { whiteBalanceToKelvin } from './utils/whiteBalanceUtils';
@@ -390,8 +391,10 @@ export default function AppLayout() {
   }), [overlayCategories]);
 
   return (
-    <div className="h-screen bg-zinc-950 text-zinc-100 flex flex-col overflow-hidden">
-      <header className="border-b border-zinc-800/60 bg-zinc-950/90 backdrop-blur-xl z-50 shrink-0">
+    <>
+      <DesktopDownloadBanner />
+      <div className="h-screen bg-zinc-950 text-zinc-100 flex flex-col overflow-hidden">
+        <header className="border-b border-zinc-800/60 bg-zinc-950/90 backdrop-blur-xl z-50 shrink-0">
         <div className="px-5 py-3 flex items-center justify-between">
           <div className="flex items-center gap-4">
             <button
@@ -1472,5 +1475,6 @@ export default function AppLayout() {
         )}
       </div>
     </div>
+    </>
   );
 }

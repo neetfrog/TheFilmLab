@@ -1,0 +1,66 @@
+name: Build and Release
+
+on:
+  push:
+    tags:
+      - 'v*.*.*'
+
+jobs:
+  build:
+    runs-on: windows-latest
+    
+    permissions:
+      contents: write
+
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/setup-node@v4
+        with:
+          node-version: '20'
+
+      - name: Install dependencies
+        run: npm ci
+
+      - name: Build web version
+        run: npm run build:web
+
+      - name: Build and create installers
+        run: npm run dist:win
+
+      - name: Get version
+        id: version
+        run: echo "VERSION=${GITHUB_REF#refs/tags/}" >> $env:GITHUB_OUTPUT
+
+      - name: Create GitHub Release
+        uses: softprops/action-gh-release@v1
+        with:
+          files: |
+            dist/TheFilmLab-*.exe
+            dist/TheFilmLab *.exe
+          body: |
+            # TheFilmLab ${{ steps.version.outputs.VERSION }}
+
+            ## What's New
+            See commits for details: https://github.com/${{ github.repository }}/commits/${{ github.ref }}
+
+            ## Downloads
+
+            - **Installer**: `TheFilmLab-x.x.x.exe` - Recommended for most users
+            - **Portable**: `TheFilmLab.exe` - No installation required, run directly
+
+            ## System Requirements
+            - Windows 7 or later
+            - 500 MB free disk space
+
+            ## Installation
+            1. Download the installer or portable version
+            2. Run the .exe file
+            3. Follow the installation prompts (if using installer)
+
+            ---
+
+            **Web Version**: Available at [thefilmlab.com](https://thefilmlab.com) or via GitHub Pages
+
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}

@@ -1,11 +1,21 @@
 {
-  "name": "react-vite-tailwind",
+  "name": "thefilmlab",
+  "productName": "TheFilmLab",
   "private": true,
-  "version": "0.0.0",
+  "version": "1.0.0",
   "type": "module",
   "scripts": {
     "dev": "vite",
+    "dev:electron": "cross-env VITE_MODE=electron vite",
     "build": "vite build",
+    "build:web": "vite build --outDir=dist/web",
+    "build:electron": "vite build --config vite.electron.config.ts",
+    "build:all": "npm run build:web && npm run build:electron",
+    "electron:dev": "npm run build:electron && electron .",
+    "electron:preview": "electron .",
+    "dist": "npm run build:electron && electron-builder",
+    "dist:win": "npm run build:electron && electron-builder --win",
+    "dist:portable": "npm run build:electron && electron-builder --win --portable",
     "preview": "vite preview"
   },
   "dependencies": {
@@ -18,14 +28,52 @@
   },
   "devDependencies": {
     "@tailwindcss/vite": "4.1.17",
+    "@types/electron": "^1.6.10",
     "@types/node": "^22.0.0",
     "@types/react": "19.2.7",
     "@types/react-dom": "19.2.3",
     "@vitejs/plugin-react": "5.1.1",
+    "cross-env": "^7.0.3",
+    "electron": "^31.0.0",
+    "electron-builder": "^25.0.0",
     "image-size": "^2.0.2",
     "tailwindcss": "4.1.17",
     "typescript": "5.9.3",
     "vite": "7.2.4",
     "vite-plugin-singlefile": "2.3.0"
+  },
+  "main": "electron/main.js",
+  "build": {
+    "appId": "com.thefilmlab.app",
+    "productName": "TheFilmLab",
+    "files": [
+      "electron/main.js",
+      "dist/**/*",
+      "node_modules/**/*",
+      "package.json"
+    ],
+    "directories": {
+      "buildResources": "assets/icons"
+    },
+    "win": {
+      "target": [
+        {
+          "target": "nsis",
+          "arch": ["x64"]
+        },
+        {
+          "target": "portable",
+          "arch": ["x64"]
+        }
+      ],
+      "certificateFile": null,
+      "signingHashAlgorithms": ["sha256"]
+    },
+    "nsis": {
+      "oneClick": false,
+      "allowToChangeInstallationDirectory": true,
+      "createDesktopShortcut": true,
+      "createStartMenuShortcut": true
+    }
   }
 }
