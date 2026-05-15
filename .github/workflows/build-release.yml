@@ -26,7 +26,7 @@ jobs:
         run: npm run build:web
 
       - name: Build and create installers
-        run: npm run build:electron && electron-builder --win
+        run: npm run build:electron && npx electron-builder --win
 
       - name: Get version
         id: version
