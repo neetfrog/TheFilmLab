@@ -27,6 +27,8 @@ jobs:
 
       - name: Build and create installers
         run: npm run build:electron && npx electron-builder --win --no-publish
+        env:
+          GH_TOKEN: ""
 
       - name: Get version
         id: version
