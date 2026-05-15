@@ -30,6 +30,21 @@ jobs:
         env:
           GH_TOKEN: ""
 
+      - name: List build artifacts
+        run: Get-ChildItem -Path dist -Recurse -Filter "*.exe" | ForEach-Object { Write-Host $_.FullName }
+        continue-on-error: true
+
+      - name: Verify exe files exist
+        run: |
+          $exeFiles = Get-ChildItem -Path dist -Recurse -Filter "*.exe" -ErrorAction SilentlyContinue
+          if ($exeFiles.Count -eq 0) {
+            Write-Error "No .exe files found in dist directory!"
+            Get-ChildItem -Path dist -Recurse | Select-Object FullName
+            exit 1
+          }
+          Write-Host "Found $($exeFiles.Count) exe file(s):"
+          $exeFiles | ForEach-Object { Write-Host "  - $($_.FullName)" }
+
       - name: Get version
         id: version
         run: echo "VERSION=${GITHUB_REF#refs/tags/}" >> $env:GITHUB_OUTPUT
@@ -38,8 +53,7 @@ jobs:
         uses: softprops/action-gh-release@v1
         with:
           files: |
-            dist/TheFilmLab-*.exe
-            dist/TheFilmLab.exe
+            dist/*.exe
           body: |
             # TheFilmLab ${{ steps.version.outputs.VERSION }}
 

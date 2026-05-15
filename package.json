@@ -52,9 +52,6 @@
       "node_modules/**/*",
       "package.json"
     ],
-    "directories": {
-      "buildResources": "assets/icons"
-    },
     "win": {
       "target": [
         {
