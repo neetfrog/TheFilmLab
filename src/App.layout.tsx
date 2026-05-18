@@ -1461,14 +1461,24 @@ export default function AppLayout() {
                   <li>Use Compare for before/after preview.</li>
                   <li>Export as JPG when ready.</li>
                 </ul>
-                <a
-                  href="https://nefas.tv"
-                  target="_blank"
-                  rel="noopener noreferrer"
-                  className="inline-block mt-3 px-3 py-2 rounded-lg bg-zinc-800 text-zinc-100 hover:bg-amber-500 hover:text-zinc-950 transition-all text-sm font-semibold"
-                >
-                  Author Website
-                </a>
+                <div className="mt-3 flex flex-wrap items-center gap-3">
+                  <a
+                    href="https://nefas.tv"
+                    target="_blank"
+                    rel="noopener noreferrer"
+                    className="inline-block px-3 py-2 rounded-lg bg-zinc-800 text-zinc-100 hover:bg-amber-500 hover:text-zinc-950 transition-all text-sm font-semibold"
+                  >
+                    Author Website
+                  </a>
+                  <a
+                    href="https://github.com/neetfrog/TheFilmLab/releases"
+                    target="_blank"
+                    rel="noopener noreferrer"
+                    className="inline-block px-3 py-2 rounded-lg bg-blue-600 text-white hover:bg-blue-500 transition-all text-sm font-semibold"
+                  >
+                    Download for Windows
+                  </a>
+                </div>
               </div>
             </div>
           </div>
